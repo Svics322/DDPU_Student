@@ -1,0 +1,130 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div style="max-width: 520px; margin: 40px auto;">
+  <div class="card">
+    <h2 class="section-title" style="margin-bottom: 6px;">Реєстрація студента</h2>
+    <p style="color: var(--muted); font-size: 0.88rem; margin-bottom: 20px;">
+      Створіть студентський обліковий запис для доступу до навчального плану та оцінок.
+      <br>
+      <span style="font-size: 0.8rem; color: #64748b;">(Примітка: облікові записи викладачів створюються виключно адміністратором).</span>
+    </p>
+
+    <form action="/register" method="POST" novalidate>
+      <div class="form-group">
+        <label for="username">Логін</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          value="{{ formData.username }}" 
+          placeholder="Придумайте логін" 
+          {% if errors.username %}class="input-error"{% endif %}
+        >
+        {% if errors.username %}
+          <span class="error-text">{{ errors.username }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="password">Пароль</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          placeholder="Введіть надійний пароль" 
+          {% if errors.password %}class="input-error"{% endif %}
+        >
+        {% if errors.password %}
+          <span class="error-text">{{ errors.password }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="fullName">Повне ПІБ студента</label>
+        <input 
+          type="text" 
+          id="fullName" 
+          name="fullName" 
+          value="{{ formData.fullName }}" 
+          placeholder="Наприклад: Юрків Віталій Романович" 
+          {% if errors.fullName %}class="input-error"{% endif %}
+        >
+        {% if errors.fullName %}
+          <span class="error-text">{{ errors.fullName }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="groupId">Академічна група</label>
+        <select id="groupId" name="groupId" {% if errors.groupId %}class="input-error"{% endif %}>
+          <option value="">-- Оберіть групу --</option>
+          {% for g in groups %}
+            <option value="{{ g.GroupID }}" {% if formData.groupId == g.GroupID %}selected{% endif %}>
+              {{ g.GroupName }} ({{ g.StartYear }}-{{ g.ReleaseYear }})
+            </option>
+          {% endfor %}
+        </select>
+        {% if errors.groupId %}
+          <span class="error-text">{{ errors.groupId }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="subgroup">Підгрупа</label>
+        <select id="subgroup" name="subgroup">
+          <option value="Підгрупа 1" {% if formData.subgroup == 'Підгрупа 1' %}selected{% endif %}>Підгрупа 1</option>
+          <option value="Підгрупа 2" {% if formData.subgroup == 'Підгрупа 2' %}selected{% endif %}>Підгрупа 2</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="departmentId">Факультет / Кафедра</label>
+        <select id="departmentId" name="departmentId">
+          {% for d in departments %}
+            <option value="{{ d.DepartmentID }}" {% if formData.departmentId == d.DepartmentID %}selected{% endif %}>
+              {{ d.AbbreviatedName }} - {{ d.FullName }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="formId">Форма навчання</label>
+        <select id="formId" name="formId">
+          {% for f in forms %}
+            <option value="{{ f.FormID }}" {% if formData.formId == f.FormID %}selected{% endif %}>
+              {{ f.FormName }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Електронна пошта</label>
+        <input 
+          type="text" 
+          id="email" 
+          name="email" 
+          value="{{ formData.email }}" 
+          placeholder="student@dspu.edu.ua"
+          {% if errors.email %}class="input-error"{% endif %}
+        >
+        {% if errors.email %}
+          <span class="error-text">{{ errors.email }}</span>
+        {% endif %}
+      </div>
+
+      <div style="margin-top: 24px;">
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          Зареєструватися
+        </button>
+      </div>
+    </form>
+
+    <div style="margin-top: 20px; text-align: center; font-size: 0.88rem; color: var(--muted);">
+      Вже маєте обліковий запис? <a href="/login" style="color: var(--primary); font-weight: 500;">Увійти</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

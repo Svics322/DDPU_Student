@@ -1,0 +1,122 @@
+{% extends "layout.njk" %}
+{% from "components/stat-box.njk" import statBox %}
+
+{% block content %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+    <div>
+      <h1 class="section-title" style="margin-bottom: 4px;">Панель керування системою</h1>
+      <p style="color: var(--muted); font-size: 0.9rem;">
+        Централізоване управління даними навчального процесу, структурою університету та безпекою
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <a href="/admin/teachers/create" class="btn btn-primary">
+        + Зареєструвати викладача
+      </a>
+      <a href="/success-rates" class="btn btn-outline">
+        Загальна відомість
+      </a>
+    </div>
+  </div>
+
+  <!-- Статистичні зведення -->
+  <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 32px;">
+    {{ statBox("Студентів у базі", stats.studentsCount or 0) }}
+    {{ statBox("Викладачів", stats.teachersCount or 0) }}
+    {{ statBox("Академічних груп", stats.groupsCount or 0) }}
+    {{ statBox("Навчальних дисциплін", stats.subjectsCount or 0) }}
+    {{ statBox("Оцінок у відомостях", stats.gradesCount or 0) }}
+  </div>
+
+  <!-- Блок: Навчальний процес -->
+  <div style="margin-bottom: 32px;">
+    <h2 style="font-size: 1.15rem; font-weight: 700; color: #1e3a8a; border-bottom: 2px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 16px;">
+      Навчальний процес та оцінювання
+    </h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+      {% for tbl in categories.education %}
+        <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+              <h3 style="font-size: 1rem; font-weight: 600; color: #0f172a;">{{ tbl.title }}</h3>
+              <span class="badge badge-secondary">{{ tbl.count }} зап.</span>
+            </div>
+            <p style="font-size: 0.84rem; color: var(--muted); margin-bottom: 16px; line-height: 1.4;">
+              {{ tbl.description }}
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; border-top: 1px solid var(--border-light); padding-top: 12px;">
+            <a href="/admin/tables/{{ tbl.key }}" class="btn btn-outline btn-sm" style="flex: 1;">
+              Переглянути
+            </a>
+            <a href="/admin/tables/{{ tbl.key }}/create" class="btn btn-primary btn-sm" style="flex: 1;">
+              + Додати
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Блок: Контингент та структура -->
+  <div style="margin-bottom: 32px;">
+    <h2 style="font-size: 1.15rem; font-weight: 700; color: #1e3a8a; border-bottom: 2px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 16px;">
+      Контингент та академічна структура
+    </h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+      {% for tbl in categories.structure %}
+        <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+              <h3 style="font-size: 1rem; font-weight: 600; color: #0f172a;">{{ tbl.title }}</h3>
+              <span class="badge badge-secondary">{{ tbl.count }} зап.</span>
+            </div>
+            <p style="font-size: 0.84rem; color: var(--muted); margin-bottom: 16px; line-height: 1.4;">
+              {{ tbl.description }}
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; border-top: 1px solid var(--border-light); padding-top: 12px;">
+            <a href="/admin/tables/{{ tbl.key }}" class="btn btn-outline btn-sm" style="flex: 1;">
+              Переглянути
+            </a>
+            <a href="/admin/tables/{{ tbl.key }}/create" class="btn btn-primary btn-sm" style="flex: 1;">
+              + Додати
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Блок: Безпека та користувачі -->
+  <div>
+    <h2 style="font-size: 1.15rem; font-weight: 700; color: #1e3a8a; border-bottom: 2px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 16px;">
+      Користувачі та безпека доступу
+    </h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+      {% for tbl in categories.security %}
+        <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+              <h3 style="font-size: 1rem; font-weight: 600; color: #0f172a;">{{ tbl.title }}</h3>
+              <span class="badge badge-secondary">{{ tbl.count }} зап.</span>
+            </div>
+            <p style="font-size: 0.84rem; color: var(--muted); margin-bottom: 16px; line-height: 1.4;">
+              {{ tbl.description }}
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; border-top: 1px solid var(--border-light); padding-top: 12px;">
+            <a href="/admin/tables/{{ tbl.key }}" class="btn btn-outline btn-sm" style="flex: 1;">
+              Переглянути
+            </a>
+            <a href="/admin/tables/{{ tbl.key }}/create" class="btn btn-primary btn-sm" style="flex: 1;">
+              + Додати
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+<header class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="nav-brand">
+      Е-Журнал Успішності
+    </a>
+
+    <nav class="nav-links">
+      {% if isAuthenticated and currentUser %}
+        {% if currentUser.role == 'admin' %}
+          <a href="/admin/tables">Панель керування</a>
+          <a href="/admin/subject-requests">Заявки викладачів</a>
+          <a href="/admin/semesters">Семестри</a>
+          <a href="/admin/teachers/create">Реєстрація викладача</a>
+          <a href="/success-rates">Загальна відомість</a>
+        {% elif currentUser.role == 'teacher' %}
+          <a href="/teacher/courses">Мої курси</a>
+          <a href="/teacher/semesters">Семестри</a>
+          <a href="/teacher/subject-requests">Заявки на предмети</a>
+          <a href="/teacher/invitations">Запрошення</a>
+          <a href="/success-rates">Загальна відомість</a>
+        {% else %}
+          <a href="/student/profile">Мій навчальний план і оцінки</a>
+          <a href="/success-rates">Загальна відомість</a>
+        {% endif %}
+      {% endif %}
+    </nav>
+
+    <div class="user-panel">
+      {% if isAuthenticated and currentUser %}
+        <span class="user-name">
+          {{ currentUser.fullName or currentUser.username }}
+        </span>
+        {% if currentUser.role == 'admin' %}
+          <span class="badge badge-admin">Адміністратор</span>
+        {% elif currentUser.role == 'teacher' %}
+          <span class="badge badge-teacher">Викладач</span>
+        {% else %}
+          <span class="badge badge-visitor">Студент</span>
+        {% endif %}
+        <a href="/logout" class="btn btn-outline btn-sm">Вийти</a>
+      {% else %}
+        <a href="/login" class="btn btn-outline btn-sm">Вхід</a>
+        <a href="/register" class="btn btn-primary btn-sm">Реєстрація студента</a>
+      {% endif %}
+    </div>
+  </div>
+</header>

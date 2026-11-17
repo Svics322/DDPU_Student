@@ -1,0 +1,169 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+    <div>
+      <div style="margin-bottom: 8px;">
+        {% if currentUser.role == 'admin' %}
+          <a href="/admin/tables/groups" class="btn btn-outline btn-sm">&larr; До переліку груп</a>
+        {% else %}
+          <a href="/teacher/courses" class="btn btn-outline btn-sm">&larr; До моїх курсів</a>
+        {% endif %}
+      </div>
+      <h1 class="section-title" style="margin-bottom: 4px;">Академічна група: {{ group.GroupName }}</h1>
+      <p style="color: var(--muted); font-size: 0.9rem;">
+        Спеціальність: <strong>{{ group.specialization.SpecName }}</strong> | Навчальний цикл: {{ group.StartYear }} — {{ group.ReleaseYear }} рр.
+      </p>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      {% if currentUser.role == 'admin' %}
+        <a href="/admin/tables/groups/edit/{{ group.GroupID }}" class="btn btn-outline btn-sm">Редагувати групу</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Статистичні показники групи -->
+  <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 32px;">
+    <div class="info-box">
+      <div class="info-label">Студентів у групі</div>
+      <div class="info-value">{{ stats.totalStudents }} чол.</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Підгрупа 1</div>
+      <div class="info-value" style="color: #2563eb;">{{ stats.subgroup1Count }} чол.</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Підгрупа 2</div>
+      <div class="info-value" style="color: #0d9488;">{{ stats.subgroup2Count }} чол.</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Закріплених курсів</div>
+      <div class="info-value" style="color: #7c3aed;">{{ stats.coursesCount }}</div>
+    </div>
+  </div>
+
+  <!-- Секція 1: Список студентів академічної групи -->
+  <div style="margin-bottom: 36px;">
+    <h2 style="font-size: 1.15rem; font-weight: 700; color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px;">
+      Список студентів академічної групи ({{ students | length }})
+    </h2>
+
+    {% if (students | length) == 0 %}
+      <div class="alert alert-info">У цій групі ще немає зарахованих студентів.</div>
+    {% else %}
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">№</th>
+              <th>ПІБ студента</th>
+              <th>Підгрупа</th>
+              <th>Форма навчання</th>
+              <th>Email</th>
+              <th>Телефон</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in students %}
+              <tr>
+                <td style="text-align: center; color: var(--muted); font-size: 0.85rem;">{{ loop.index }}</td>
+                <td>
+                  <strong>{{ s.FullName }}</strong>
+                </td>
+                <td>
+                  <span class="badge {% if s.Subgroup == 'Підгрупа 1' %}badge-info{% else %}badge-secondary{% endif %}">
+                    {{ s.Subgroup }}
+                  </span>
+                </td>
+                <td>{{ s.educationForm.FormName if s.educationForm else "Денна" }}</td>
+                <td style="font-size: 0.88rem; color: #475569;">
+                  {{ s.Email or "—" }}
+                </td>
+                <td style="font-size: 0.88rem; color: #475569;">
+                  {{ s.Phone or "—" }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Секція 2: Навчальні дисципліни групи -->
+  <div>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px;">
+      <h2 style="font-size: 1.15rem; font-weight: 700; color: #1e3a8a; margin: 0;">
+        Навчальні дисципліни групи ({{ courses | length }})
+      </h2>
+      {% if currentUser.role == 'teacher' %}
+        <span style="font-size: 0.82rem; color: #64748b;">
+          Відображаються дисципліни, до яких ви маєте підтверджений доступ
+        </span>
+      {% else %}
+        <span style="font-size: 0.82rem; color: #64748b;">
+          Режим адміністратора: показано всі закріплені дисципліни групи
+        </span>
+      {% endif %}
+    </div>
+
+    {% if (courses | length) == 0 %}
+      <div class="alert alert-info">
+        {% if currentUser.role == 'teacher' %}
+          Для цієї групи наразі немає закріплених дисциплін із вашого списку схвалених предметів.
+          Ви можете <a href="/teacher/courses/create" style="font-weight: 600;">створити курс для цієї групи</a>.
+        {% else %}
+          Для цієї групи наразі не закріплено жодної навчальної дисципліни.
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Навчальна дисципліна</th>
+              <th>Навчальний період</th>
+              <th>Вид навантаження</th>
+              <th>Підгрупа</th>
+              <th>Викладач</th>
+              <th style="text-align: center; width: 140px;">Дії</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in courses %}
+              <tr>
+                <td>
+                  <strong>{{ c.subject.SubjectName }}</strong>
+                </td>
+                <td>
+                  {{ c.AcademicYear }} ({{ c.CourseYear }} курс, {{ c.Semester }} сем.)
+                </td>
+                <td>
+                  <span class="badge badge-secondary">{{ c.RoleType }}</span>
+                </td>
+                <td>
+                  <span class="badge badge-info">{{ c.Subgroup }}</span>
+                </td>
+                <td>
+                  {{ c.teacher.FullName if c.teacher else "—" }}
+                </td>
+                <td style="text-align: center;">
+                  {% if currentUser.role == 'admin' or c.TeacherID == currentUser.teacherId %}
+                    <a href="/teacher/courses/{{ c.AssignmentID }}/students" class="btn btn-primary btn-sm">
+                      Журнал &rarr;
+                    </a>
+                  {% else %}
+                    <span style="font-size: 0.8rem; color: var(--muted);">Закріплено за колегою</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

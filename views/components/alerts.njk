@@ -1,0 +1,15 @@
+{# Компонент універсальних повідомлень системи #}
+{% macro alerts(successMessage, errorMessage, warningMessage, infoMessage) %}
+  {% if successMessage %}
+    <div class="alert alert-success">{{ successMessage }}</div>
+  {% endif %}
+  {% if errorMessage %}
+    <div class="alert alert-danger">{{ errorMessage }}</div>
+  {% endif %}
+  {% if warningMessage %}
+    <div class="alert alert-warning">{{ warningMessage }}</div>
+  {% endif %}
+  {% if infoMessage %}
+    <div class="alert alert-info">{{ infoMessage }}</div>
+  {% endif %}
+{% endmacro %}

@@ -1,0 +1,303 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div class="card" style="max-width: 640px; margin: 30px auto;">
+  <div style="margin-bottom: 20px;">
+    <div style="margin-bottom: 8px;">
+      <a href="/teacher/courses" class="btn btn-outline btn-sm">&larr; До панелі моїх курсів</a>
+    </div>
+    <h1 class="section-title" style="margin-bottom: 4px;">{{ title }}</h1>
+    <p style="color: var(--muted); font-size: 0.88rem;">
+      Закріплення дисципліни за академічною групою на запланований навчальний семестр
+    </p>
+  </div>
+
+  {% if (subjects | length) == 0 and currentUser.role != 'admin' %}
+    <div class="alert alert-warning" style="margin-bottom: 24px;">
+      У вас наразі немає жодної навчальної дисципліни з підтвердженим доступом.
+      Щоб закріпити навчальний курс, спочатку 
+      <a href="/teacher/subject-requests" style="font-weight: 700; text-decoration: underline;">подайте заявку на доступ до потрібного предмету</a> 
+      та зачекайте її схвалення адміністратором.
+    </div>
+  {% endif %}
+
+  {% if errors.general %}
+    <div class="alert alert-danger" style="margin-bottom: 20px;">
+      {{ errors.general }}
+    </div>
+  {% endif %}
+
+  <form id="courseForm" action="/teacher/courses/create" method="POST" novalidate>
+    <div class="form-group">
+      <label for="subjectId">Навчальна дисципліна (доступні вам предмети)</label>
+      <select 
+        id="subjectId" 
+        name="subjectId" 
+        class="{% if errors.subjectId %}input-error{% endif %}"
+      >
+        <option value="">-- Оберіть дисципліну зі схваленим доступом --</option>
+        {% for s in subjects %}
+          <option value="{{ s.SubjectID }}" {% if formData.subjectId == s.SubjectID %}selected{% endif %}>
+            {{ s.SubjectName }}
+          </option>
+        {% endfor %}
+      </select>
+      {% if errors.subjectId %}
+        <span class="error-text">{{ errors.subjectId }}</span>
+      {% endif %}
+      <div style="font-size: 0.78rem; color: var(--muted); margin-top: 4px;">
+        Потрібної дисципліни немає у переліку доступних? Ви можете 
+        <a href="/teacher/subject-requests">подати заявку адміністрації</a>.
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="semesterId">Навчальний семестр та період</label>
+      <select 
+        id="semesterId" 
+        name="semesterId" 
+        class="{% if errors.semesterId %}input-error{% endif %}"
+      >
+        <option value="">-- Оберіть семестр --</option>
+        {% for sem in semesters %}
+          <option 
+            value="{{ sem.SemesterID }}" 
+            {% if formData.semesterId == sem.SemesterID %}selected{% endif %}
+          >
+            {{ sem.Name }} ({{ sem.StartDate }} — {{ sem.EndDate }})
+          </option>
+        {% endfor %}
+      </select>
+      {% if errors.semesterId %}
+        <span class="error-text">{{ errors.semesterId }}</span>
+      {% endif %}
+      <div style="font-size: 0.78rem; color: var(--muted); margin-top: 4px;">
+        Потрібного періоду немає? Ви можете <a href="/teacher/semesters/create">запланувати новий семестр</a>.
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+      <div class="form-group">
+        <label for="groupId">Академічна група</label>
+        <select 
+          id="groupId" 
+          name="groupId" 
+          class="{% if errors.groupId %}input-error{% endif %}"
+        >
+          <option value="">-- Оберіть групу --</option>
+          {% for g in groups %}
+            <option value="{{ g.GroupID }}" {% if formData.groupId == g.GroupID %}selected{% endif %}>
+              {{ g.GroupName }} ({{ g.specialization.SpecName }})
+            </option>
+          {% endfor %}
+        </select>
+        {% if errors.groupId %}
+          <span class="error-text">{{ errors.groupId }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="courseYear">Курс (1-6)</label>
+        <input 
+          type="number" 
+          id="courseYear" 
+          name="courseYear" 
+          value="{{ formData.courseYear or 2 }}" 
+          min="1" 
+          max="6"
+          class="{% if errors.courseYear %}input-error{% endif %}"
+        >
+        {% if errors.courseYear %}
+          <span class="error-text">{{ errors.courseYear }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="form-group">
+        <label for="roleType">Вид навантаження</label>
+        <select 
+          id="roleType" 
+          name="roleType" 
+          class="{% if errors.roleType %}input-error{% endif %}"
+        >
+          <option value="">-- Оберіть вид навантаження --</option>
+          <option value="Лекційні заняття" {% if formData.roleType == 'Лекційні заняття' %}selected{% endif %}>Лекційні заняття</option>
+          <option value="Лабораторні заняття" {% if formData.roleType == 'Лабораторні заняття' %}selected{% endif %}>Лабораторні заняття</option>
+          <option value="Практичні заняття" {% if formData.roleType == 'Практичні заняття' %}selected{% endif %}>Практичні заняття</option>
+          <option value="Лекції та семінари" {% if formData.roleType == 'Лекції та семінари' %}selected{% endif %}>Лекції та семінари</option>
+          <option value="Лекції та практика" {% if formData.roleType == 'Лекції та практика' %}selected{% endif %}>Лекції та практика</option>
+          <option value="Семінарські заняття" {% if formData.roleType == 'Семінарські заняття' %}selected{% endif %}>Семінарські заняття</option>
+        </select>
+        {% if errors.roleType %}
+          <span class="error-text">{{ errors.roleType }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="subgroup">Підгрупа / Потік</label>
+        <select 
+          id="subgroup" 
+          name="subgroup" 
+          class="{% if errors.subgroup %}input-error{% endif %}"
+        >
+          <option value="">-- Оберіть підгрупу / потік --</option>
+          <option value="Вся група" {% if formData.subgroup == 'Вся група' %}selected{% endif %}>Вся група</option>
+          <option value="Підгрупа 1" {% if formData.subgroup == 'Підгрупа 1' %}selected{% endif %}>Підгрупа 1</option>
+          <option value="Підгрупа 2" {% if formData.subgroup == 'Підгрупа 2' %}selected{% endif %}>Підгрупа 2</option>
+        </select>
+        {% if errors.subgroup %}
+          <span class="error-text">{{ errors.subgroup }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 24px;">
+      <button type="submit" id="submitBtn" class="btn btn-primary">
+        Створити та закріпити курс
+      </button>
+      <a href="/teacher/courses" class="btn btn-outline">Скасувати</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function() {
+    const existingAssignments = {{ existingAssignmentsJSON | safe if existingAssignmentsJSON else '[]' }};
+    const semestersData = {{ semestersJSON | safe if semestersJSON else '[]' }};
+
+    const formEl = document.getElementById('courseForm');
+    const subjectSelect = document.getElementById('subjectId');
+    const semesterSelect = document.getElementById('semesterId');
+    const groupSelect = document.getElementById('groupId');
+    const roleTypeSelect = document.getElementById('roleType');
+    const subgroupSelect = document.getElementById('subgroup');
+
+    function updateDynamicCourseOptions() {
+      const subjectId = Number(subjectSelect.value);
+      const semesterId = Number(semesterSelect.value);
+      const groupId = Number(groupSelect.value);
+      const currentSubgroup = subgroupSelect.value;
+
+      const semObj = semestersData.find(s => Number(s.id) === semesterId);
+
+      if (!subjectId || !semObj || !groupId) {
+        Array.from(roleTypeSelect.options).forEach(opt => { opt.disabled = false; });
+        Array.from(subgroupSelect.options).forEach(opt => { opt.disabled = false; });
+        return;
+      }
+
+      const matching = existingAssignments.filter(a => 
+        Number(a.groupId) === groupId &&
+        Number(a.subjectId) === subjectId &&
+        String(a.academicYear).trim() === String(semObj.year).trim() &&
+        Number(a.semester) === Number(semObj.num)
+      );
+
+      // 1. Оновлення доступності для roleType
+      Array.from(roleTypeSelect.options).forEach(opt => {
+        if (!opt.value) return;
+        const roleMatches = matching.filter(m => m.roleType === opt.value);
+        const hasAll = roleMatches.some(m => m.subgroup === 'Вся група');
+        const hasSub1 = roleMatches.some(m => m.subgroup === 'Підгрупа 1');
+        const hasSub2 = roleMatches.some(m => m.subgroup === 'Підгрупа 2');
+
+        let isBlocked = false;
+        if (hasAll || (hasSub1 && hasSub2)) {
+          isBlocked = true;
+        } else if (currentSubgroup === 'Вся група' && (hasSub1 || hasSub2)) {
+          isBlocked = true;
+        } else if (currentSubgroup === 'Підгрупа 1' && (hasAll || hasSub1)) {
+          isBlocked = true;
+        } else if (currentSubgroup === 'Підгрупа 2' && (hasAll || hasSub2)) {
+          isBlocked = true;
+        }
+
+        opt.disabled = isBlocked;
+        if (isBlocked && roleTypeSelect.value === opt.value) {
+          roleTypeSelect.value = '';
+        }
+      });
+
+      const selectedRole = roleTypeSelect.value;
+
+      // 2. Оновлення доступності для subgroup
+      if (!selectedRole) {
+        Array.from(subgroupSelect.options).forEach(opt => {
+          if (!opt.value) return;
+          opt.disabled = false;
+        });
+      } else {
+        const roleMatches = matching.filter(m => m.roleType === selectedRole);
+        const hasWholeGroup = roleMatches.some(m => m.subgroup === 'Вся група');
+        const hasSub1 = roleMatches.some(m => m.subgroup === 'Підгрупа 1');
+        const hasSub2 = roleMatches.some(m => m.subgroup === 'Підгрупа 2');
+
+        Array.from(subgroupSelect.options).forEach(opt => {
+          if (!opt.value) return;
+
+          let isBlocked = false;
+          if (opt.value === 'Вся група') {
+            if (hasWholeGroup || hasSub1 || hasSub2) isBlocked = true;
+          } else if (opt.value === 'Підгрупа 1') {
+            if (hasWholeGroup || hasSub1) isBlocked = true;
+          } else if (opt.value === 'Підгрупа 2') {
+            if (hasWholeGroup || hasSub2) isBlocked = true;
+          }
+
+          opt.disabled = isBlocked;
+          if (isBlocked && subgroupSelect.value === opt.value) {
+            subgroupSelect.value = '';
+          }
+        });
+      }
+    }
+
+    [subjectSelect, semesterSelect, groupSelect, roleTypeSelect, subgroupSelect].forEach(el => {
+      if (el) el.addEventListener('change', updateDynamicCourseOptions);
+    });
+
+    if (formEl) {
+      formEl.addEventListener('submit', function(e) {
+        const curRole = roleTypeSelect.value;
+        const curSub = subgroupSelect.value;
+        const subjectId = Number(subjectSelect.value);
+        const semesterId = Number(semesterSelect.value);
+        const groupId = Number(groupSelect.value);
+        const semObj = semestersData.find(s => Number(s.id) === semesterId);
+
+        if (!subjectId || !semObj || !groupId || !curRole || !curSub) return;
+
+        const matching = existingAssignments.filter(a => 
+          Number(a.groupId) === groupId &&
+          Number(a.subjectId) === subjectId &&
+          String(a.academicYear).trim() === String(semObj.year).trim() &&
+          Number(a.semester) === Number(semObj.num)
+        );
+
+        const exactMatch = matching.find(m => m.roleType === curRole && m.subgroup === curSub);
+        if (exactMatch) {
+          e.preventDefault();
+          return false;
+        }
+
+        if (curSub === 'Вся група') {
+          const splitConflict = matching.find(m => m.roleType === curRole && (m.subgroup === 'Підгрупа 1' || m.subgroup === 'Підгрупа 2'));
+          if (splitConflict) {
+            e.preventDefault();
+            return false;
+          }
+        } else {
+          const wholeConflict = matching.find(m => m.roleType === curRole && m.subgroup === 'Вся група');
+          if (wholeConflict) {
+            e.preventDefault();
+            return false;
+          }
+        }
+      });
+    }
+
+    updateDynamicCourseOptions();
+  })();
+</script>
+{% endblock %}

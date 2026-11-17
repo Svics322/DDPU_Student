@@ -1,0 +1,73 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+    <div>
+      <div style="margin-bottom: 8px;">
+        <a href="/admin/tables" class="btn btn-outline btn-sm">&larr; До панелі адміністратора</a>
+      </div>
+      <h1 class="section-title" style="margin-bottom: 4px;">{{ config.title }}</h1>
+      <p style="color: var(--muted); font-size: 0.88rem;">
+        {{ config.description or "Реєстр записів розділу" }} &bull; Всього записів: {{ records | length }}
+      </p>
+    </div>
+
+    <div>
+      <a href="/admin/tables/{{ tableName }}/create" class="btn btn-primary">
+        + Додати новий запис
+      </a>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 50px;">ID</th>
+          {% for field in config.fields %}
+            <th>{{ field.label }}</th>
+          {% endfor %}
+          <th style="min-width: 180px; text-align: center; white-space: nowrap;">Дії</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in records %}
+          <tr>
+            <td><strong>{{ item[config.pk] }}</strong></td>
+            {% for field in config.fields %}
+              <td>
+                {% if field.type == 'password' %}
+                  <span style="color: var(--muted);">••••••••</span>
+                {% else %}
+                  {{ item[field.name] if item[field.name] !== null else "—" }}
+                {% endif %}
+              </td>
+            {% endfor %}
+            <td style="text-align: center; white-space: nowrap;">
+              <a href="/admin/tables/{{ tableName }}/edit/{{ item[config.pk] }}" class="btn btn-outline btn-sm">
+                Редагувати
+              </a>
+              <button 
+                type="button" 
+                class="btn btn-danger btn-sm"
+                data-delete-url="/admin/tables/{{ tableName }}/delete/{{ item[config.pk] }}"
+                data-check-url="/admin/tables/{{ tableName }}/check-relations/{{ item[config.pk] }}"
+                data-delete-name="{{ item._displayName }}"
+              >
+                Видалити
+              </button>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="{{ (config.fields | length) + 2 }}" style="text-align: center; padding: 28px; color: var(--muted);">
+              Записи у цьому розділі відсутні.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

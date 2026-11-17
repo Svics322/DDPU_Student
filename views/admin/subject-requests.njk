@@ -1,0 +1,236 @@
+{% extends "layout.njk" %}
+{% from "components/alerts.njk" import alerts %}
+{% from "components/status-badges.njk" import requestBadge %}
+{% from "components/stat-box.njk" import statBox %}
+{% from "components/page-header.njk" import pageHeader %}
+
+{% block content %}
+<div class="card">
+  {% call pageHeader(
+    "Розгляд заявок та керування доступом до дисциплін", 
+    "Схвалення, обмеження та відкликання доступу викладачів до навчальних дисциплін і семестрів",
+    "/admin/tables",
+    "До панелі керування"
+  ) %}
+  {% endcall %}
+
+  <!-- Статистика заявок та доступів -->
+  <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 24px;">
+    {{ statBox("Очікують розгляду", stats.pendingCount, "#b45309") }}
+    {{ statBox("Схвалено (повний доступ)", stats.approvedCount, "#15803d") }}
+    {{ statBox("Обмежений доступ", stats.restrictedCount, "#d97706") }}
+    {{ statBox("Відхилені / Відкликані", stats.rejectedCount, "#b91c1c") }}
+  </div>
+
+  <!-- Фільтри -->
+  <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+    <a href="/admin/subject-requests?status=all" class="btn btn-sm {% if statusFilter == 'all' %}btn-primary{% else %}btn-outline{% endif %}">
+      Усі записи
+    </a>
+    <a href="/admin/subject-requests?status=pending" class="btn btn-sm {% if statusFilter == 'pending' %}btn-primary{% else %}btn-outline{% endif %}">
+      Очікують ({{ stats.pendingCount }})
+    </a>
+    <a href="/admin/subject-requests?status=approved" class="btn btn-sm {% if statusFilter == 'approved' %}btn-primary{% else %}btn-outline{% endif %}">
+      Схвалені ({{ stats.approvedCount }})
+    </a>
+    <a href="/admin/subject-requests?status=restricted" class="btn btn-sm {% if statusFilter == 'restricted' %}btn-primary{% else %}btn-outline{% endif %}">
+      Обмежені ({{ stats.restrictedCount }})
+    </a>
+    <a href="/admin/subject-requests?status=rejected" class="btn btn-sm {% if statusFilter == 'rejected' %}btn-primary{% else %}btn-outline{% endif %}">
+      Відхилені / Відкликані ({{ stats.rejectedCount }})
+    </a>
+  </div>
+
+  {{ alerts(successMessage, errorMessage) }}
+
+  {% if (requests | length) == 0 %}
+    <div class="alert alert-info">
+      Записів у цій категорії наразі немає.
+    </div>
+  {% else %}
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Викладач</th>
+            <th>Кафедра</th>
+            <th>Дисципліна</th>
+            <th>Статус доступу</th>
+            <th>Діючі закріплення</th>
+            <th>Співвикладачі</th>
+            <th>Коментар адміністратора</th>
+            <th style="width: 220px; text-align: center;">Керування доступом</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in requests %}
+            <tr>
+              <td>
+                <strong>{{ r.teacher.FullName }}</strong>
+                <div style="font-size: 0.78rem; color: var(--muted);">{{ r.teacher.Degree or "Викладач" }}</div>
+              </td>
+              <td>{{ r.teacher.department.AbbreviatedName if r.teacher.department else "—" }}</td>
+              <td><strong>{{ r.subject.SubjectName }}</strong></td>
+              <td>
+                {{ requestBadge(r.Status) }}
+              </td>
+              <td style="font-size: 0.85rem;">
+                {% if r.assignmentsCount > 0 %}
+                  <span style="font-weight: 600; color: #1e3a8a;">{{ r.assignmentsCount }} курсів</span>
+                  <div style="font-size: 0.75rem; color: #64748b; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ r.assignmentsSummary }}">
+                    {{ r.assignmentsSummary }}
+                  </div>
+                {% else %}
+                  <span style="color: var(--muted);">Немає закріплень</span>
+                {% endif %}
+              </td>
+              <td style="font-size: 0.85rem;">
+                {% if r.coTeachersCount > 0 %}
+                  <span style="font-weight: 600; color: #0284c7;">{{ r.coTeachersCount }} чол.</span>
+                  <div style="font-size: 0.75rem; color: #64748b; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ r.coTeachersSummary }}">
+                    {{ r.coTeachersSummary }}
+                  </div>
+                {% else %}
+                  <span style="color: var(--muted);">—</span>
+                {% endif %}
+              </td>
+              <td style="font-size: 0.84rem; color: var(--muted);">
+                {{ r.AdminComment or "—" }}
+              </td>
+              <td style="text-align: center;">
+                {% if r.Status == 'pending' %}
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <form action="/admin/subject-requests/{{ r.RequestID }}/approve" method="POST" style="margin: 0; display: flex; gap: 4px;">
+                      <input type="text" name="adminComment" placeholder="Примітка (опціонально)" style="font-size: 0.8rem; padding: 4px 8px;">
+                      <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;">
+                        Схвалити
+                      </button>
+                    </form>
+
+                    <form action="/admin/subject-requests/{{ r.RequestID }}/reject" method="POST" style="margin: 0; display: flex; gap: 4px;">
+                      <input type="text" name="adminComment" placeholder="Причина відхилення" style="font-size: 0.8rem; padding: 4px 8px;">
+                      <button type="submit" class="btn btn-danger btn-sm" style="white-space: nowrap;">
+                        Відхилити
+                      </button>
+                    </form>
+                  </div>
+                {% elif r.Status == 'approved' or r.Status == 'restricted' %}
+                  <button 
+                    type="button" 
+                    class="btn btn-outline btn-sm"
+                    onclick='openAccessModal({
+                      requestId: "{{ r.RequestID }}",
+                      teacherId: "{{ r.TeacherID }}",
+                      subjectId: "{{ r.SubjectID }}",
+                      teacherName: "{{ r.teacher.FullName }}",
+                      departmentName: "{{ r.teacher.department.FullName if r.teacher.department else "Кафедра" }}",
+                      subjectName: "{{ r.subject.SubjectName }}",
+                      currentStatus: "{{ r.Status }}",
+                      assignmentsCount: {{ r.assignmentsCount }},
+                      assignmentsSummary: "{{ r.assignmentsSummary }}",
+                      coTeachersCount: {{ r.coTeachersCount }},
+                      coTeachersSummary: "{{ r.coTeachersSummary }}"
+                    })'
+                  >
+                    Керування доступом
+                  </button>
+                {% elif r.Status == 'rejected' %}
+                  <button 
+                    type="button" 
+                    class="btn btn-outline btn-sm"
+                    onclick='openAccessModal({
+                      requestId: "{{ r.RequestID }}",
+                      teacherId: "{{ r.TeacherID }}",
+                      subjectId: "{{ r.SubjectID }}",
+                      teacherName: "{{ r.teacher.FullName }}",
+                      departmentName: "{{ r.teacher.department.FullName if r.teacher.department else "Кафедра" }}",
+                      subjectName: "{{ r.subject.SubjectName }}",
+                      currentStatus: "{{ r.Status }}",
+                      assignmentsCount: {{ r.assignmentsCount }},
+                      assignmentsSummary: "{{ r.assignmentsSummary }}",
+                      coTeachersCount: {{ r.coTeachersCount }},
+                      coTeachersSummary: "{{ r.coTeachersSummary }}"
+                    })'
+                  >
+                    Поновити доступ
+                  </button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+
+{% include "components/access-modal.njk" %}
+
+<script>
+  function openAccessModal(data) {
+    document.getElementById('formRequestId').value = data.requestId || '';
+    document.getElementById('formTeacherId').value = data.teacherId;
+    document.getElementById('formSubjectId').value = data.subjectId;
+    document.getElementById('modalTeacherName').textContent = data.teacherName;
+    document.getElementById('modalDepartmentName').textContent = data.departmentName;
+    document.getElementById('modalSubjectName').textContent = data.subjectName;
+
+    // Статус
+    const badgeEl = document.getElementById('modalStatusBadge');
+    if (data.currentStatus === 'approved') {
+      badgeEl.innerHTML = '<span class="badge badge-success">Схвалено (повний доступ)</span>';
+    } else if (data.currentStatus === 'restricted') {
+      badgeEl.innerHTML = '<span class="badge badge-warning" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a;">Обмежено (тільки наявні семестри)</span>';
+    } else if (data.currentStatus === 'rejected') {
+      badgeEl.innerHTML = '<span class="badge badge-danger">Відхилено / Відкликано</span>';
+    } else {
+      badgeEl.innerHTML = '<span class="badge badge-warning">Очікує</span>';
+    }
+
+    // Закріплення та співвикладачі
+    const assignText = data.assignmentsCount > 0 
+      ? `${data.assignmentsCount} курсів (${data.assignmentsSummary})` 
+      : 'Немає активних закріплень';
+    document.getElementById('modalAssignmentsInfo').textContent = assignText;
+
+    const coText = data.coTeachersCount > 0
+      ? `${data.coTeachersCount} чол. (${data.coTeachersSummary})`
+      : 'Співвикладачів не залучено';
+    document.getElementById('modalCoTeachersInfo').textContent = coText;
+
+    // Відображення опцій в залежності від поточного стану
+    const restoreLabel = document.getElementById('optRestoreLabel');
+    const restrictRadio = document.getElementById('optRestrict');
+    const restoreRadio = document.getElementById('optRestore');
+    const revokeRadio = document.getElementById('optRevoke');
+
+    const revokeCoTeachersWrap = document.getElementById('revokeCoTeachersWrap');
+    function updateCoTeachersVisibility() {
+      if (revokeRadio && revokeRadio.checked && data.coTeachersCount > 0) {
+        revokeCoTeachersWrap.style.display = 'block';
+      } else {
+        revokeCoTeachersWrap.style.display = 'none';
+      }
+    }
+
+    restrictRadio.onchange = updateCoTeachersVisibility;
+    revokeRadio.onchange = updateCoTeachersVisibility;
+    restoreRadio.onchange = updateCoTeachersVisibility;
+
+    if (data.currentStatus === 'restricted' || data.currentStatus === 'rejected') {
+      restoreLabel.style.display = 'flex';
+      restoreRadio.checked = true;
+    } else {
+      restoreLabel.style.display = 'none';
+      restrictRadio.checked = true;
+    }
+    updateCoTeachersVisibility();
+
+    document.getElementById('accessControlModal').style.display = 'flex';
+  }
+
+  function closeAccessModal() {
+    document.getElementById('accessControlModal').style.display = 'none';
+  }
+</script>
+{% endblock %}

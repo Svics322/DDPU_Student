@@ -1,0 +1,150 @@
+{% extends "layout.njk" %}
+{% from "components/alerts.njk" import alerts %}
+{% from "components/status-badges.njk" import invitationBadge %}
+
+{% block content %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+    <div>
+      <div style="margin-bottom: 8px;">
+        <a href="/teacher/courses" class="btn btn-outline btn-sm">&larr; До моїх курсів</a>
+      </div>
+      <h1 class="section-title" style="margin-bottom: 4px;">Запрошення до викладання курсів</h1>
+      <p style="color: var(--muted); font-size: 0.9rem;">
+        Спільне викладання дисциплін: обробка запрошень від колег та статус надісланих запитів
+      </p>
+    </div>
+  </div>
+
+  {{ alerts(successMessage, errorMessage) }}
+
+  <!-- Секція 1: Вхідні запрошення -->
+  <div style="margin-bottom: 36px;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+      <h2 class="sub-section-title" style="margin: 0; border: none;">
+        Вхідні запрошення від колег
+      </h2>
+      {% if pendingCount > 0 %}
+        <span class="badge badge-warning">{{ pendingCount }} нових</span>
+      {% endif %}
+    </div>
+
+    {% if (receivedInvitations | length) == 0 %}
+      <div class="alert alert-info">
+        У вас наразі немає вхідних запрошень до курсів від інших викладачів.
+      </div>
+    {% else %}
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Хто запросив</th>
+              <th>Дисципліна</th>
+              <th>Група</th>
+              <th>Період</th>
+              <th>Запропоноване навантаження</th>
+              <th>Повідомлення колеги</th>
+              <th>Статус</th>
+              <th style="width: 200px; text-align: center;">Дії</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inv in receivedInvitations %}
+              <tr>
+                <td><strong>{{ inv.senderTeacher.FullName }}</strong></td>
+                <td>
+                  <strong>{{ inv.assignment.subject.SubjectName }}</strong>
+                </td>
+                <td>{{ inv.assignment.group.GroupName }}</td>
+                <td style="font-size: 0.85rem;">
+                  {{ inv.assignment.AcademicYear }} ({{ inv.assignment.Semester }} сем.)
+                </td>
+                <td>
+                  <span class="badge badge-secondary">{{ inv.RoleType }}</span>
+                  <div style="font-size: 0.78rem; color: var(--muted); margin-top: 2px;">
+                    {{ inv.Subgroup }}
+                  </div>
+                </td>
+                <td style="font-size: 0.85rem; color: #334155;">
+                  {{ inv.Message or "—" }}
+                </td>
+                <td>
+                  {{ invitationBadge(inv.Status) }}
+                </td>
+                <td style="text-align: center;">
+                  {% if inv.Status == 'pending' %}
+                    <div style="display: flex; gap: 6px; justify-content: center;">
+                      <form action="/teacher/invitations/{{ inv.InvitationID }}/accept" method="POST" style="margin: 0;">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                          Прийняти
+                        </button>
+                      </form>
+                      <form action="/teacher/invitations/{{ inv.InvitationID }}/decline" method="POST" style="margin: 0;">
+                        <button type="submit" class="btn btn-outline btn-sm">
+                          Відхилити
+                        </button>
+                      </form>
+                    </div>
+                  {% elif inv.Status == 'accepted' %}
+                    <a href="/teacher/courses" class="btn btn-outline btn-sm">
+                      Перейти до курсу
+                    </a>
+                  {% else %}
+                    <span style="color: var(--muted); font-size: 0.82rem;">Відхилено</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Секція 2: Надіслані запрошення -->
+  <div>
+    <h2 class="sub-section-title" style="margin-top: 0;">
+      Надіслані вами запрошення колегам
+    </h2>
+
+    {% if (sentInvitations | length) == 0 %}
+      <div style="color: var(--muted); font-size: 0.88rem; padding: 12px 0;">
+        Ви ще не надсилали запрошень іншим викладачам. Ви можете запросити колегу на сторінці журналу свого курсу.
+      </div>
+    {% else %}
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Запрошений викладач</th>
+              <th>Дисципліна</th>
+              <th>Група</th>
+              <th>Навантаження</th>
+              <th>Підгрупа</th>
+              <th>Статус відповіді</th>
+              <th>Дата надсилання</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inv in sentInvitations %}
+              <tr>
+                <td><strong>{{ inv.receiverTeacher.FullName }}</strong></td>
+                <td>{{ inv.assignment.subject.SubjectName }}</td>
+                <td>{{ inv.assignment.group.GroupName }}</td>
+                <td>{{ inv.RoleType }}</td>
+                <td>{{ inv.Subgroup }}</td>
+                <td>
+                  {{ invitationBadge(inv.Status) }}
+                </td>
+                <td style="font-size: 0.82rem; color: var(--muted);">
+                  {{ inv.CreatedAt | default("—") }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

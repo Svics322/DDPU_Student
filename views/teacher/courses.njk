@@ -1,0 +1,187 @@
+{% extends "layout.njk" %}
+{% from "components/alerts.njk" import alerts %}
+{% from "components/stat-box.njk" import statBox %}
+{% from "components/status-badges.njk" import semesterBadge %}
+
+{% block content %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+    <div>
+      <h1 class="section-title" style="margin-bottom: 4px;">Панель викладача: Навчальні курси</h1>
+      <p style="color: var(--muted); font-size: 0.9rem;">
+        Викладач: <strong>{{ teacher.FullName }}</strong> | {{ teacher.Degree or "Науково-педагогічний склад" }}
+      </p>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <a href="/teacher/courses/create" class="btn btn-primary">+ Створити курс</a>
+      <a href="/teacher/semesters" class="btn btn-outline">Семестри</a>
+      <a href="/teacher/subject-requests" class="btn btn-outline">Заявки на предмети</a>
+      <a href="/teacher/invitations" class="btn btn-outline">
+        Запрошення
+        {% if stats.pendingInvitationsCount > 0 %}
+          <span class="badge badge-warning" style="margin-left: 4px;">{{ stats.pendingInvitationsCount }}</span>
+        {% endif %}
+      </a>
+      <a href="/success-rates" class="btn btn-outline">Загальна відомість</a>
+    </div>
+  </div>
+
+  {{ alerts(successMessage, errorMessage) }}
+
+  <!-- Повідомлення про вхідні запрошення -->
+  {% if (pendingInvitations | length) > 0 %}
+    <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 16px; margin-bottom: 28px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div style="font-weight: 700; color: #92400e; font-size: 0.98rem;">
+          У вас є нові запрошення до співвикладання курсів ({{ pendingInvitations | length }}):
+        </div>
+        <a href="/teacher/invitations" class="btn btn-outline btn-sm" style="background: #fff;">
+          Усі запрошення &rarr;
+        </a>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        {% for inv in pendingInvitations %}
+          <div style="background: #ffffff; border: 1px solid #fef3c7; border-radius: 4px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <strong>{{ inv.senderTeacher.FullName }}</strong> запрошує вас до курсу 
+              <strong>{{ inv.assignment.subject.SubjectName }}</strong> (група {{ inv.assignment.group.GroupName }}, {{ inv.Subgroup }})
+              <div style="font-size: 0.8rem; color: #78350f; margin-top: 2px;">
+                Вид навантаження: <strong>{{ inv.RoleType }}</strong> | {{ inv.Message or "Без повідомлення" }}
+              </div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <form action="/teacher/invitations/{{ inv.InvitationID }}/accept" method="POST" style="margin: 0;">
+                <button type="submit" class="btn btn-primary btn-sm">Прийняти</button>
+              </form>
+              <form action="/teacher/invitations/{{ inv.InvitationID }}/decline" method="POST" style="margin: 0;">
+                <button type="submit" class="btn btn-outline btn-sm">Відхилити</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Статистика викладача -->
+  <div class="info-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 32px;">
+    {{ statBox("Закріплених курсів / груп", stats.coursesCount or 0) }}
+    {{ statBox("Студентів у контингенті", (stats.totalStudents or 0) ~ " чол.") }}
+    {{ statBox("Внесено оцінок до відомостей", stats.gradedCount or 0) }}
+    {{ statBox("Середній бал за курсами", stats.avgMark or "—", "#15803d") }}
+  </div>
+
+  {% if (groupedByYear | length) == 0 %}
+    <div class="alert alert-info">
+      У розкладі наразі немає закріплених за вами навчальних дисциплін.
+      <div style="margin-top: 8px;">
+        Ви можете <a href="/teacher/courses/create" style="font-weight: 600;">створити свій перший навчальний курс</a> або <a href="/teacher/subject-requests">подати заявку на викладання предмету</a>.
+      </div>
+    </div>
+  {% else %}
+    {% for yearKey, yearData in groupedByYear %}
+      <div style="margin-bottom: 36px;">
+        <h2 style="font-size: 1.2rem; font-weight: 700; color: #1e3a8a; border-bottom: 2px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 20px;">
+          Навчальний рік: {{ yearData.academicYear }}
+        </h2>
+
+        {% for semKey, semData in yearData.semesters %}
+          <div style="margin-bottom: 30px; padding-left: 16px; border-left: 4px solid #3b82f6;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <h3 class="sub-section-title" style="margin: 0; color: #1e293b; font-size: 1.1rem; font-weight: 700;">
+                  {{ semData.semesterName or semData.title }}
+                </h3>
+                {{ semesterBadge(semData.status, semData.isDateExpired, semData.isDateFuture) }}
+              </div>
+              <span style="font-size: 0.85rem; color: var(--muted);">
+                Дисциплін у цьому періоді: <strong>{{ semData.subjects | length }}</strong>
+              </span>
+            </div>
+
+            <!-- Розподіл за дисциплінами -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+              {% for subjId, subjData in semData.subjects %}
+                <div style="background: #ffffff; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                  <!-- Шапка предмету -->
+                  <div style="background: #f8fafc; border-bottom: 1px solid var(--border-light); padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div style="font-size: 1.05rem; font-weight: 700; color: #1e3a8a;">
+                      {{ subjData.subjectName }}
+                    </div>
+                    <span style="font-size: 0.82rem; color: #64748b;">
+                      Академічних груп: <strong>{{ subjData.groups | length }}</strong>
+                    </span>
+                  </div>
+
+                  <!-- Окремі блоки для кожної академічної групи -->
+                  <div style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+                    {% for grpId, grpData in subjData.groups %}
+                      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <span style="font-size: 0.82rem; color: #64748b; font-weight: 600;">Академічна група:</span>
+                            <a 
+                              href="/teacher/groups/{{ grpData.groupId }}" 
+                              class="badge" 
+                              style="background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 0.88rem; border: 1px solid #bfdbfe; text-decoration: none; padding: 4px 10px;"
+                              title="Переглянути склад студентів та дисципліни групи"
+                            >
+                              {{ grpData.groupName }} &rarr;
+                            </a>
+                            <span style="font-size: 0.8rem; color: var(--muted);">
+                              {{ grpData.specName }} (Курс {{ grpData.courseYear }})
+                            </span>
+                          </div>
+                          <span style="font-size: 0.8rem; color: #64748b;">
+                            Занять у групі: <strong>{{ grpData.classes | length }}</strong>
+                          </span>
+                        </div>
+
+                        <!-- Картки занять для цієї групи -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+                          {% for item in grpData.classes %}
+                            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between;">
+                              <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                  <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 600; font-size: 0.78rem;">
+                                    {{ item.assignment.RoleType }}
+                                  </span>
+                                  <span class="badge" style="background: #f1f5f9; color: #334155; font-weight: 600; font-size: 0.78rem;">
+                                    {{ item.assignment.Subgroup }}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div style="border-top: 1px solid #f1f5f9; padding-top: 10px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                <span style="font-size: 0.8rem; color: #475569;">
+                                  Контингент: <strong>{{ item.studentCount }}</strong> чол.
+                                </span>
+
+                                <div style="display: flex; gap: 6px;">
+                                  {% if semData.status == 'active' and not semData.isDateExpired and not semData.isDateFuture and item.canInvite %}
+                                    <a href="/teacher/courses/{{ item.assignment.AssignmentID }}/invite" class="btn btn-outline btn-sm" title="Запросити іншого викладача">
+                                      + Колега
+                                    </a>
+                                  {% endif %}
+                                  <a href="/teacher/courses/{{ item.assignment.AssignmentID }}/students" class="btn btn-primary btn-sm">
+                                    Журнал &rarr;
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

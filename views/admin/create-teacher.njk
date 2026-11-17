@@ -1,0 +1,116 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 30px auto;">
+  <div class="card">
+    <div style="margin-bottom: 20px;">
+      <div style="margin-bottom: 8px;">
+        <a href="/admin/tables" class="btn btn-outline btn-sm">&larr; До панелі адміністратора</a>
+      </div>
+      <h1 class="section-title" style="margin-bottom: 4px;">{{ title }}</h1>
+      <p style="color: var(--muted); font-size: 0.88rem;">
+        Створення нового викладача в базі даних та його облікового запису
+      </p>
+    </div>
+
+    <form action="/admin/teachers/create" method="POST" novalidate>
+      <div class="form-group">
+        <label for="fullName">ПІБ викладача</label>
+        <input 
+          type="text" 
+          id="fullName" 
+          name="fullName" 
+          value="{{ formData.fullName }}" 
+          placeholder="Наприклад: Кобильник Тарас Петрович" 
+          {% if errors.fullName %}class="input-error"{% endif %}
+        >
+        {% if errors.fullName %}
+          <span class="error-text">{{ errors.fullName }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="departmentId">Кафедра / Факультет</label>
+        <select id="departmentId" name="departmentId" {% if errors.departmentId %}class="input-error"{% endif %}>
+          <option value="">-- Оберіть кафедру --</option>
+          {% for d in departments %}
+            <option value="{{ d.DepartmentID }}" {% if formData.departmentId == d.DepartmentID %}selected{% endif %}>
+              {{ d.AbbreviatedName }} - {{ d.FullName }}
+            </option>
+          {% endfor %}
+        </select>
+        {% if errors.departmentId %}
+          <span class="error-text">{{ errors.departmentId }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="degree">Вчений ступінь / Посада</label>
+        <input type="text" id="degree" name="degree" value="{{ formData.degree }}" placeholder="Наприклад: Доцент, кандидат педагогічних наук">
+      </div>
+
+      <div class="form-group">
+        <label for="email">Електронна пошта</label>
+        <input 
+          type="text" 
+          id="email" 
+          name="email" 
+          value="{{ formData.email }}" 
+          placeholder="teacher@dspu.edu.ua"
+          {% if errors.email %}class="input-error"{% endif %}
+        >
+        {% if errors.email %}
+          <span class="error-text">{{ errors.email }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Контактний телефон</label>
+        <input type="text" id="phone" name="phone" value="{{ formData.phone }}" placeholder="+380...">
+      </div>
+
+      <div style="margin: 24px 0 16px 0; border-top: 1px solid var(--border-light); padding-top: 16px;">
+        <h3 style="font-size: 0.95rem; font-weight: 600; color: #1e3a8a; margin-bottom: 12px;">
+          Обліковий запис для входу в систему
+        </h3>
+
+        <div class="form-group">
+          <label for="username">Логін викладача</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            value="{{ formData.username }}" 
+            placeholder="Придумайте логін для викладача" 
+            {% if errors.username %}class="input-error"{% endif %}
+          >
+          {% if errors.username %}
+            <span class="error-text">{{ errors.username }}</span>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="password">Початковий пароль</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            placeholder="Введіть пароль" 
+            {% if errors.password %}class="input-error"{% endif %}
+          >
+          {% if errors.password %}
+            <span class="error-text">{{ errors.password }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 24px;">
+        <button type="submit" class="btn btn-primary">
+          Зареєструвати викладача
+        </button>
+        <a href="/admin/tables" class="btn btn-outline">Скасувати</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

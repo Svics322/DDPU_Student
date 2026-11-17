@@ -1,0 +1,44 @@
+{# Компонент бейджів статусів #}
+
+{# Бейдж статусу семестру #}
+{% macro semesterBadge(status, isDateExpired, isDateFuture) %}
+  {% if status == 'active' %}
+    {% if isDateExpired %}
+      <span class="badge badge-secondary" title="Термін закінчення семестру минув">Термін вичерпано</span>
+    {% elif isDateFuture %}
+      <span class="badge badge-warning" title="Дата початку семестру ще не настала">Очікує початку</span>
+    {% else %}
+      <span class="badge badge-success">Виконується</span>
+    {% endif %}
+  {% elif status == 'completed' %}
+    <span class="badge badge-secondary">Завершено</span>
+  {% elif status == 'planned' %}
+    <span class="badge badge-warning">Заплановано</span>
+  {% else %}
+    <span class="badge badge-secondary">{{ status or "Невизначено" }}</span>
+  {% endif %}
+{% endmacro %}
+
+{# Бейдж статусу заявки на предмет #}
+{% macro requestBadge(status) %}
+  {% if status == 'approved' %}
+    <span class="badge badge-success">Схвалено</span>
+  {% elif status == 'restricted' %}
+    <span class="badge badge-warning" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a;">Обмежено</span>
+  {% elif status == 'rejected' %}
+    <span class="badge badge-danger">Відхилено / Відкликано</span>
+  {% else %}
+    <span class="badge badge-warning">Очікує розгляду</span>
+  {% endif %}
+{% endmacro %}
+
+{# Бейдж статусу запрошення співвикладача #}
+{% macro invitationBadge(status) %}
+  {% if status == 'accepted' %}
+    <span class="badge badge-success">Прийнято</span>
+  {% elif status == 'declined' %}
+    <span class="badge badge-danger">Відхилено</span>
+  {% else %}
+    <span class="badge badge-warning">Очікує відповіді</span>
+  {% endif %}
+{% endmacro %}

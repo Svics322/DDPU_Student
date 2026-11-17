@@ -1,0 +1,123 @@
+{% extends "layout.njk" %}
+{% from "components/grade-badge.njk" import gradeBadge %}
+
+{% block content %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+    <div>
+      <h1 class="section-title" style="margin-bottom: 4px;">{{ student.FullName }}</h1>
+      <p style="color: var(--muted); font-size: 0.9rem;">
+        Навчальна картка студента | Група: <strong>{{ student.group.GroupName }}</strong> ({{ student.group.specialization.SpecName }})
+      </p>
+    </div>
+    <div>
+      <a href="/success-rates" class="btn btn-outline btn-sm">Загальна відомість</a>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-box">
+      <div class="info-label">Факультет / Інститут</div>
+      <div class="info-value">{{ student.department.FullName }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Спеціальність</div>
+      <div class="info-value">{{ student.group.specialization.SpecName }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Група та підгрупа</div>
+      <div class="info-value">{{ student.group.GroupName }} ({{ student.Subgroup }})</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Форма навчання</div>
+      <div class="info-value">{{ student.educationForm.FormName }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Середній бал успішності</div>
+      <div class="info-value" style="color: #1e3a8a; font-size: 1.15rem; font-weight: 700;">
+        {{ averageGrade or "—" }}
+      </div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Отримано оцінок</div>
+      <div class="info-value">{{ gradesCount }} дисциплін</div>
+    </div>
+  </div>
+
+  <h2 class="sub-section-title" style="margin-top: 32px; font-size: 1.15rem;">
+    Історія вивчення дисциплін та семестрового контролю
+  </h2>
+
+  {% if (curriculumHistory | length) == 0 %}
+    <div class="alert alert-info">
+      У базі даних наразі відсутні записи про вивчені предмети або отримані оцінки.
+    </div>
+  {% else %}
+    {% for yearKey, yearData in curriculumHistory %}
+      <div style="margin-top: 24px;">
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: #1e3a8a; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 16px;">
+          Навчальний рік: {{ yearData.academicYear }}
+        </h3>
+
+        {% for semKey, semData in yearData.semesters %}
+          <div style="margin-bottom: 24px; padding-left: 12px; border-left: 3px solid #94a3b8;">
+            <h4 style="font-size: 0.98rem; font-weight: 600; color: #334155; margin-bottom: 10px;">
+              {{ semData.title }}
+            </h4>
+
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Назва дисципліни</th>
+                    <th>Викладач(і) курсу</th>
+                    <th>Вид контролю</th>
+                    <th>Дата оцінювання</th>
+                    <th>Підсумковий бал</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for subjId, subj in semData.subjects %}
+                    <tr>
+                      <td style="font-weight: 600;">
+                        {{ subj.subjectName }}
+                      </td>
+                      <td>
+                        {% for t in subj.teachers %}
+                          <div style="font-size: 0.85rem; line-height: 1.4;">
+                            {{ t.teacherName }}
+                            <span style="color: var(--muted); font-size: 0.78rem;">
+                              ({{ t.roleType }}{% if t.subgroup != 'Вся група' %}, {{ t.subgroup }}{% endif %})
+                            </span>
+                          </div>
+                        {% else %}
+                          <span style="color: var(--muted);">—</span>
+                        {% endfor %}
+                      </td>
+                      <td>
+                        {% if subj.grade and subj.grade.controlType %}
+                          <span style="font-size: 0.85rem; color: var(--info); font-weight: 500;">
+                            {{ subj.grade.controlType }}
+                          </span>
+                        {% else %}
+                          <span style="color: var(--muted);">—</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {{ subj.grade.assessmentDate or "—" }}
+                      </td>
+                      <td>
+                        {{ gradeBadge(subj.grade.mark) }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div class="card" style="max-width: 640px; margin: 20px auto;">
+  <div style="margin-bottom: 20px;">
+    <div style="margin-bottom: 8px;">
+      <a href="/admin/tables/{{ tableName }}" class="btn btn-outline btn-sm">&larr; До списку записів</a>
+    </div>
+    <h1 class="section-title" style="margin-bottom: 4px;">
+      {% if isEdit %}Редагування запису{% else %}Створення нового запису{% endif %}
+    </h1>
+    <p style="color: var(--muted); font-size: 0.88rem;">
+      Розділ даних: <strong>{{ config.title }}</strong>
+      {% if isEdit %} | <strong>{{ itemTitle or ("Запис #" + id) }}</strong>{% endif %}
+    </p>
+  </div>
+
+  {% if fieldErrors._global %}
+    <div class="alert alert-danger">{{ fieldErrors._global }}</div>
+  {% endif %}
+
+  <form action="{% if isEdit %}/admin/tables/{{ tableName }}/edit/{{ id }}{% else %}/admin/tables/{{ tableName }}/create{% endif %}" method="POST" novalidate>
+    {% for field in config.fields %}
+      <div class="form-group">
+        <label for="{{ field.name }}">{{ field.label }}</label>
+
+        {% if field.type == 'select' %}
+          <select 
+            id="{{ field.name }}" 
+            name="{{ field.name }}" 
+            {% if fieldErrors[field.name] %}class="input-error"{% endif %}
+          >
+            <option value="">-- Оберіть {{ field.label | lower }} --</option>
+            {% for opt in selectOptions[field.name] %}
+              <option value="{{ opt.value }}" {% if itemData[field.name] == opt.value %}selected{% endif %}>
+                {{ opt.label }}
+              </option>
+            {% endfor %}
+          </select>
+
+        {% elif field.type == 'date' %}
+          <input 
+            type="date" 
+            id="{{ field.name }}" 
+            name="{{ field.name }}" 
+            value="{{ itemData[field.name] }}" 
+            {% if fieldErrors[field.name] %}class="input-error"{% endif %}
+          >
+
+        {% elif field.type == 'number' %}
+          <input 
+            type="number" 
+            id="{{ field.name }}" 
+            name="{{ field.name }}" 
+            value="{{ itemData[field.name] }}" 
+            {% if fieldErrors[field.name] %}class="input-error"{% endif %}
+          >
+
+        {% elif field.type == 'password' %}
+          <input 
+            type="password" 
+            id="{{ field.name }}" 
+            name="{{ field.name }}" 
+            placeholder="Введіть новий пароль"
+            {% if fieldErrors[field.name] %}class="input-error"{% endif %}
+          >
+
+        {% else %}
+          <input 
+            type="text" 
+            id="{{ field.name }}" 
+            name="{{ field.name }}" 
+            value="{{ itemData[field.name] }}" 
+            {% if fieldErrors[field.name] %}class="input-error"{% endif %}
+          >
+        {% endif %}
+
+        {% if fieldErrors[field.name] %}
+          <span class="error-text">{{ fieldErrors[field.name] }}</span>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <div style="display: flex; gap: 10px; margin-top: 24px;">
+      <button type="submit" class="btn btn-primary">
+        {% if isEdit %}Зберегти зміни{% else %}Створити запис{% endif %}
+      </button>
+      <a href="/admin/tables/{{ tableName }}" class="btn btn-outline">Скасувати</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.querySelectorAll('input, select, textarea').forEach(function(el) {
+    el.addEventListener('change', function() {
+      el.classList.remove('input-error');
+      const err = el.parentElement ? el.parentElement.querySelector('.error-text') : null;
+      if (err) err.style.display = 'none';
+    });
+    el.addEventListener('input', function() {
+      el.classList.remove('input-error');
+      const err = el.parentElement ? el.parentElement.querySelector('.error-text') : null;
+      if (err) err.style.display = 'none';
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,227 @@
+<div id="deleteModal" class="modal-backdrop" style="display: none;">
+  <div class="modal-dialog">
+    <!-- Шапка модального вікна -->
+    <div class="modal-header">
+      <h3 class="modal-title" id="deleteModalTitle">Підтвердження видалення</h3>
+      <button type="button" class="modal-close" onclick="closeDeleteModal()">&times;</button>
+    </div>
+
+    <!-- Тіло: Стан завантаження -->
+    <div class="modal-body" id="deleteModalLoading" style="display: none; text-align: center; padding: 32px 20px;">
+      <p style="color: var(--muted); font-size: 0.95rem;">
+        Перевірка наявності пов'язаних записів...
+      </p>
+    </div>
+
+    <!-- Тіло 1: Звичайне підтвердження (якщо зв'язків немає) -->
+    <div class="modal-body" id="deleteModalNormalBody" style="display: block;">
+      <p style="margin-bottom: 10px; font-size: 0.92rem; color: #334155;">
+        Ви дійсно бажаєте видалити цей запис?
+      </p>
+      <div id="deleteModalItemName" style="font-weight: 600; color: #1e293b; background: #f8fafc; border: 1px solid var(--border-light); padding: 10px 14px; border-radius: 4px; margin-bottom: 12px; font-size: 0.9rem;">
+        —
+      </div>
+      <p style="color: var(--danger); font-size: 0.85rem; line-height: 1.4;">
+        Увага: Цю дію неможливо скасувати. Дані буде безповоротно видалено з бази даних.
+      </p>
+    </div>
+
+    <!-- Тіло 2: Каскадне підтвердження (якщо виявлено зв'язки) -->
+    <div class="modal-body" id="deleteModalCascadeBody" style="display: none;">
+      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px;">
+        <div style="font-weight: 600; color: #991b1b; font-size: 0.92rem; margin-bottom: 4px;">
+          Попередження: Наявні пов'язані дані
+        </div>
+        <div style="font-size: 0.86rem; color: #7f1d1d; line-height: 1.4;">
+          Видалення цього запису призведе до безповоротного каскадного видалення всіх пов'язаних з ним даних:
+        </div>
+      </div>
+
+      <div id="deleteModalCascadeItemName" style="font-weight: 600; color: #1e293b; background: #f8fafc; border: 1px solid var(--border-light); padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 0.88rem;">
+        —
+      </div>
+
+      <div style="font-size: 0.86rem; font-weight: 600; color: #334155; margin-bottom: 6px;">
+        Пов'язані сутності, що будуть видалені:
+      </div>
+      <ul id="deleteModalRelationsList" style="list-style: none; padding: 0; margin-bottom: 14px;">
+        <!-- Динамічно заповнюється JS -->
+      </ul>
+
+      <p style="font-size: 0.84rem; color: var(--danger); font-weight: 500; line-height: 1.4;">
+        Ви дійсно бажаєте видалити цей запис разом з усіма пов'язаними даними?
+      </p>
+    </div>
+
+    <!-- Підвал: Кнопки скасування та підтвердження/каскаду -->
+    <div class="modal-footer" id="deleteModalFooter" style="display: flex;">
+      <button type="button" class="btn btn-outline" onclick="closeDeleteModal()">
+        Скасувати
+      </button>
+      <form id="deleteModalForm" method="POST" action="" style="display: inline; margin: 0;">
+        <button type="submit" class="btn btn-danger" id="deleteModalSubmitBtn">
+          Підтвердити видалення
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function closeDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    if (modal) {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  }
+
+  function showNormalConfirmState(actionUrl, itemName) {
+    const titleEl = document.getElementById('deleteModalTitle');
+    const nameEl = document.getElementById('deleteModalItemName');
+    const form = document.getElementById('deleteModalForm');
+    const submitBtn = document.getElementById('deleteModalSubmitBtn');
+
+    const loadingBody = document.getElementById('deleteModalLoading');
+    const normalBody = document.getElementById('deleteModalNormalBody');
+    const cascadeBody = document.getElementById('deleteModalCascadeBody');
+    const footer = document.getElementById('deleteModalFooter');
+
+    if (titleEl) {
+      titleEl.textContent = 'Підтвердження видалення';
+      titleEl.style.color = '#0f172a';
+    }
+    if (nameEl) nameEl.textContent = itemName || 'Обраний запис';
+    if (form) form.action = actionUrl;
+    if (submitBtn) {
+      submitBtn.textContent = 'Підтвердити видалення';
+      submitBtn.disabled = false;
+    }
+
+    if (loadingBody) loadingBody.style.display = 'none';
+    if (normalBody) normalBody.style.display = 'block';
+    if (cascadeBody) cascadeBody.style.display = 'none';
+    if (footer) footer.style.display = 'flex';
+  }
+
+  function showCascadeConfirmState(actionUrl, itemName, details) {
+    const titleEl = document.getElementById('deleteModalTitle');
+    const nameEl = document.getElementById('deleteModalCascadeItemName');
+    const listEl = document.getElementById('deleteModalRelationsList');
+    const form = document.getElementById('deleteModalForm');
+    const submitBtn = document.getElementById('deleteModalSubmitBtn');
+
+    const loadingBody = document.getElementById('deleteModalLoading');
+    const normalBody = document.getElementById('deleteModalNormalBody');
+    const cascadeBody = document.getElementById('deleteModalCascadeBody');
+    const footer = document.getElementById('deleteModalFooter');
+
+    if (titleEl) {
+      titleEl.textContent = 'Каскадне видалення запису';
+      titleEl.style.color = '#991b1b';
+    }
+    if (nameEl) nameEl.textContent = itemName || 'Обраний запис';
+    if (form) form.action = actionUrl;
+    if (submitBtn) {
+      submitBtn.textContent = 'Видалити разом із пов\'язаними даними';
+      submitBtn.disabled = false;
+    }
+
+    if (listEl) {
+      listEl.innerHTML = '';
+      if (details && details.length > 0) {
+        details.forEach(function(item) {
+          const li = document.createElement('li');
+          li.style.cssText = 'padding: 6px 10px; margin-bottom: 6px; background: #fff; border: 1px solid #fecaca; border-left: 3px solid #dc2626; border-radius: 4px; font-size: 0.85rem; color: #1e293b;';
+          li.textContent = item;
+          listEl.appendChild(li);
+        });
+      } else {
+        const li = document.createElement('li');
+        li.textContent = 'Виявлено зовнішні зв\'язки запису.';
+        listEl.appendChild(li);
+      }
+    }
+
+    if (loadingBody) loadingBody.style.display = 'none';
+    if (normalBody) normalBody.style.display = 'none';
+    if (cascadeBody) cascadeBody.style.display = 'block';
+    if (footer) footer.style.display = 'flex';
+  }
+
+  function openDeleteModalWithCheck(actionUrl, checkUrl, itemName) {
+    const modal = document.getElementById('deleteModal');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    if (!checkUrl) {
+      showNormalConfirmState(actionUrl, itemName);
+      return;
+    }
+
+    const loadingBody = document.getElementById('deleteModalLoading');
+    const normalBody = document.getElementById('deleteModalNormalBody');
+    const cascadeBody = document.getElementById('deleteModalCascadeBody');
+    const titleEl = document.getElementById('deleteModalTitle');
+    const submitBtn = document.getElementById('deleteModalSubmitBtn');
+
+    if (titleEl) {
+      titleEl.textContent = 'Перевірка пов\'язаних даних';
+      titleEl.style.color = '#0f172a';
+    }
+    if (loadingBody) loadingBody.style.display = 'block';
+    if (normalBody) normalBody.style.display = 'none';
+    if (cascadeBody) cascadeBody.style.display = 'none';
+    if (submitBtn) submitBtn.disabled = true;
+
+    fetch(checkUrl, {
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('Помилка перевірки зв\'язків');
+      return res.json();
+    })
+    .then(function(data) {
+      if (data && data.hasRelations) {
+        showCascadeConfirmState(actionUrl, itemName, data.details);
+      } else {
+        showNormalConfirmState(actionUrl, itemName);
+      }
+    })
+    .catch(function(err) {
+      console.warn('Помилка запиту перевірки, перемикаємо на стандартне підтвердження:', err);
+      showNormalConfirmState(actionUrl, itemName);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('deleteModal');
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          closeDeleteModal();
+        }
+      });
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeDeleteModal();
+      }
+    });
+
+    // Делегування подій для кнопок видалення
+    document.body.addEventListener('click', function(e) {
+      const trigger = e.target.closest('[data-delete-url]');
+      if (trigger) {
+        e.preventDefault();
+        const actionUrl = trigger.getAttribute('data-delete-url');
+        const checkUrl = trigger.getAttribute('data-check-url');
+        const itemName = trigger.getAttribute('data-delete-name');
+        openDeleteModalWithCheck(actionUrl, checkUrl, itemName);
+      }
+    });
+  });
+</script>

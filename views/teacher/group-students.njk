@@ -1,0 +1,178 @@
+{% extends "layout.njk" %}
+{% from "components/alerts.njk" import alerts %}
+{% from "components/grade-badge.njk" import gradeBadge %}
+{% from "components/status-badges.njk" import invitationBadge %}
+
+{% block content %}
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+    <div>
+      <div style="margin-bottom: 8px;">
+        <a href="/teacher/courses" class="btn btn-outline btn-sm">&larr; До панелі моїх курсів</a>
+      </div>
+      <h1 class="section-title" style="margin-bottom: 4px;">{{ title }}</h1>
+      <p style="color: var(--muted); font-size: 0.9rem;">
+        Журнал оцінювання закріпленого контингенту студентів
+      </p>
+    </div>
+
+    <div>
+      {% if isOwner and (canTeacherGrade or user.role == 'admin') %}
+        <a href="/teacher/courses/{{ assignment.AssignmentID }}/invite" class="btn btn-primary btn-sm">
+          + Запросити співвикладача
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {{ alerts(successMessage, errorMessage, gradingState.reason if (not canTeacherGrade and user.role != 'admin') else null) }}
+
+  <div class="info-grid">
+    <div class="info-box">
+      <div class="info-label">Дисципліна</div>
+      <div style="font-weight: 700; color: #1e3a8a; font-size: 1.05rem;">
+        {{ assignment.subject.SubjectName }}
+      </div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Група / Спеціальність</div>
+      <div style="font-weight: 600; color: #0f172a; font-size: 0.95rem;">
+        <a href="/teacher/groups/{{ assignment.GroupID }}" style="color: #1e40af; text-decoration: underline;" title="Переглянути студентів та дисципліни групи">
+          {{ assignment.group.GroupName }} &rarr;
+        </a> 
+        ({{ assignment.group.specialization.SpecName }})
+      </div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Період навчання</div>
+      <div style="font-weight: 600; color: #0f172a; font-size: 0.95rem;">
+        {{ assignment.AcademicYear }} ({{ assignment.CourseYear }} курс, {{ assignment.Semester }} семестр)
+      </div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Закріплений потік</div>
+      <div style="font-weight: 600; color: #0f172a; font-size: 0.95rem;">
+        {{ assignment.Subgroup }} ({{ assignment.RoleType }})
+      </div>
+    </div>
+  </div>
+
+  {% if (coTeachers | length) > 1 %}
+    <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 6px; padding: 12px 16px; margin-bottom: 24px;">
+      <div class="info-label" style="margin-bottom: 6px;">Інші викладачі цієї дисципліни у групі:</div>
+      <ul style="padding-left: 18px; font-size: 0.88rem; color: #334155; line-height: 1.5; margin: 0;">
+        {% for ct in coTeachers %}
+          {% if ct.TeacherID != assignment.TeacherID %}
+            <li>
+              <strong>{{ ct.teacher.FullName }}</strong> — {{ ct.Subgroup }} ({{ ct.RoleType }})
+            </li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if (invitations | length) > 0 %}
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px 16px; margin-bottom: 24px;">
+      <div class="info-label" style="color: #1e40af; margin-bottom: 6px;">Надіслані запити на спільне викладання:</div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        {% for inv in invitations %}
+          <div style="font-size: 0.85rem; color: #1e3a8a; display: flex; justify-content: space-between; align-items: center;">
+            <span>
+              Запрошено: <strong>{{ inv.receiverTeacher.FullName }}</strong> ({{ inv.RoleType }}, {{ inv.Subgroup }})
+            </span>
+            <span>
+              {{ invitationBadge(inv.Status) }}
+            </span>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <h2 class="sub-section-title" style="margin: 0; border: none;">
+      Список студентів ({{ studentData | length }} чол.)
+    </h2>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 40px;">№</th>
+          <th>ПІБ Студента</th>
+          <th>Підгрупа</th>
+          <th>Вид контролю</th>
+          <th>Дата оцінювання</th>
+          <th>Поточна оцінка</th>
+          <th style="width: 220px; text-align: center;">Управління оцінкою</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in studentData %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>
+              <strong>{{ item.student.FullName }}</strong>
+              <div style="font-size: 0.78rem; color: var(--muted);">
+                {{ item.student.Email or "email не вказано" }}
+              </div>
+            </td>
+            <td>
+              <span class="badge badge-secondary">{{ item.student.Subgroup }}</span>
+            </td>
+            <td>
+              {% if item.grade and item.grade.controlType %}
+                <span style="font-size: 0.85rem; color: var(--info); font-weight: 500;">
+                  {{ item.grade.controlType.ControlTypeName }}
+                </span>
+              {% else %}
+                <span style="color: var(--muted); font-size: 0.85rem;">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {{ item.grade.AssessmentDate or "—" }}
+            </td>
+            <td>
+              {{ gradeBadge(item.grade.Mark) }}
+            </td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if not canTeacherGrade and user.role != 'admin' %}
+                <span class="badge {{ gradingState.badgeClass or 'badge-secondary' }}" style="margin-right: 6px;">
+                  {{ gradingState.badge }}
+                </span>
+              {% elif item.grade %}
+                <a href="/teacher/courses/{{ assignment.AssignmentID }}/grades/edit/{{ item.grade.SuccRateID }}" class="btn btn-outline btn-sm">
+                  Редагувати
+                </a>
+                <button 
+                  type="button" 
+                  class="btn btn-danger btn-sm"
+                  data-delete-url="/teacher/grades/delete/{{ item.grade.SuccRateID }}?assignmentId={{ assignment.AssignmentID }}"
+                  data-delete-name="Оцінка: {{ item.student.FullName }} ({{ item.grade.Mark }} б.)"
+                >
+                  Видалити
+                </button>
+              {% else %}
+                <a href="/teacher/courses/{{ assignment.AssignmentID }}/grades/create/{{ item.student.StudentID }}" class="btn btn-primary btn-sm">
+                  + Виставити оцінку
+                </a>
+              {% endif %}
+              <a href="/student/profile/{{ item.student.StudentID }}" class="btn btn-outline btn-sm" title="Переглянути всі семестри">
+                Картка
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 28px; color: var(--muted);">
+              Студентів у закріпленій групі/підгрупі не знайдено.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,659 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div class="card" style="max-width: 680px; margin: 20px auto;">
+  <div style="margin-bottom: 20px;">
+    <div style="margin-bottom: 8px;">
+      <a href="/admin/tables/{{ tableName }}" class="btn btn-outline btn-sm">&larr; До списку записів</a>
+    </div>
+    <h1 class="section-title" style="margin-bottom: 4px;">
+      {% if isEdit %}Редагування оцінки у відомості{% else %}Створення нового запису у відомості{% endif %}
+    </h1>
+    <p style="color: var(--muted); font-size: 0.88rem;">
+      Розділ даних: <strong>Відомість успішності</strong>
+      {% if isEdit %} | <strong>Запис #{{ id }}</strong>{% endif %}
+    </p>
+  </div>
+
+  {% if fieldErrors._global %}
+    <div class="alert alert-danger" style="margin-bottom: 16px;">
+      {{ fieldErrors._global }}
+    </div>
+  {% endif %}
+
+  {% if existingDuplicate %}
+    <div class="alert alert-warning" style="margin-bottom: 20px; border-left: 4px solid #f59e0b; background-color: #fefce8; padding: 14px;">
+      <div style="font-weight: 600; color: #92400e; margin-bottom: 6px;">
+        Виявлено наявну оцінку в системі
+      </div>
+      <div style="font-size: 0.88rem; color: #78350f; line-height: 1.5;">
+        Для студента <strong>{{ existingDuplicate.studentName }}</strong> з дисципліни <strong>«{{ existingDuplicate.subjectName }}»</strong> ({{ existingDuplicate.controlTypeName }}, {{ existingDuplicate.semester }} сем. {{ existingDuplicate.academicYear }}) вже внесено:
+        <strong>{{ existingDuplicate.mark }} балів</strong> (Дата: {{ existingDuplicate.assessmentDate }}, викладач: {{ existingDuplicate.teacherName }}).
+      </div>
+      <div style="margin-top: 12px;">
+        <button type="button" class="btn btn-sm btn-primary" onclick="confirmOverwriteDirectly()" style="background-color: #059669; border-color: #059669;">
+          Підтвердити оновлення на нову оцінку ({{ existingDuplicate.newMark }} балів)
+        </button>
+      </div>
+    </div>
+  {% endif %}
+
+  <form id="successRateForm" action="{% if isEdit %}/admin/tables/{{ tableName }}/edit/{{ id }}{% else %}/admin/tables/{{ tableName }}/create{% endif %}" method="POST" novalidate>
+    <input type="hidden" id="confirmOverwrite" name="confirmOverwrite" value="false">
+    <input type="hidden" id="existingSuccRateId" name="existingSuccRateId" value="{{ existingDuplicate.succRateId if existingDuplicate else '' }}">
+
+    <!-- Приховані поля навчального періоду (заповнюються автоматично при виборі семестру) -->
+    <input type="hidden" id="AcademicYear" name="AcademicYear" value="{{ itemData.AcademicYear }}">
+    <input type="hidden" id="Semester" name="Semester" value="{{ itemData.Semester }}">
+    <input type="hidden" id="CourseYear" name="CourseYear" value="{{ itemData.CourseYear }}">
+
+    <!-- 1. Академічна група -->
+    <div class="form-group">
+      <label for="groupSelect">Академічна група <span style="color: var(--danger);">*</span></label>
+      <select 
+        id="groupSelect" 
+        name="GroupID" 
+        class="{% if fieldErrors.GroupID %}input-error{% endif %}"
+      >
+        <option value="">-- Оберіть академічну групу --</option>
+        {% for g in groups %}
+          <option 
+            value="{{ g.GroupID }}" 
+            data-startyear="{{ g.StartYear }}"
+            {% if (selectedGroupId and selectedGroupId == g.GroupID) or (itemData.GroupID and itemData.GroupID == g.GroupID) %}selected{% endif %}
+          >
+            {{ g.GroupName }}
+          </option>
+        {% endfor %}
+      </select>
+      {% if fieldErrors.GroupID %}
+        <span class="error-text">{{ fieldErrors.GroupID }}</span>
+      {% endif %}
+    </div>
+
+    <!-- 2. Студент -->
+    <div class="form-group">
+      <label for="StudentID">Студент <span style="color: var(--danger);">*</span></label>
+      <select 
+        id="StudentID" 
+        name="StudentID" 
+        class="{% if fieldErrors.StudentID %}input-error{% endif %}"
+        {% if not selectedGroupId and not itemData.GroupID %}disabled{% endif %}
+      >
+        <option value="">
+          {% if not selectedGroupId and not itemData.GroupID %}
+            -- Спочатку оберіть академічну групу --
+          {% else %}
+            -- Оберіть студента --
+          {% endif %}
+        </option>
+        {% if selectedGroupId or itemData.GroupID %}
+          {% set curGid = selectedGroupId or itemData.GroupID %}
+          {% for s in allStudents %}
+            {% if s.GroupID == curGid %}
+              <option value="{{ s.StudentID }}" {% if itemData.StudentID == s.StudentID %}selected{% endif %}>
+                {{ s.FullName }} ({{ s.Subgroup }})
+              </option>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      </select>
+      {% if fieldErrors.StudentID %}
+        <span class="error-text">{{ fieldErrors.StudentID }}</span>
+      {% endif %}
+    </div>
+
+    <!-- 3. Навчальний семестр -->
+    <div class="form-group">
+      <label for="semesterSelect">Навчальний семестр <span style="color: var(--danger);">*</span></label>
+      <select id="semesterSelect" name="semesterSelect" class="{% if fieldErrors.Semester or fieldErrors.AcademicYear or fieldErrors.CourseYear %}input-error{% endif %}">
+        <option value="">-- Оберіть навчальний семестр зі списку --</option>
+        {% for sem in allSemesters %}
+          {% set semKey = sem.AcademicYear + ":" + sem.SemesterNumber %}
+          <option 
+            value="{{ semKey }}" 
+            data-year="{{ sem.AcademicYear }}" 
+            data-semester="{{ sem.SemesterNumber }}"
+            data-start="{{ sem.StartDate }}"
+            data-end="{{ sem.EndDate }}"
+            data-status="{{ sem.Status }}"
+            {% if itemData.AcademicYear == sem.AcademicYear and itemData.Semester == sem.SemesterNumber %}selected{% endif %}
+          >
+            {{ sem.AcademicYear }} | {{ sem.SemesterNumber }} семестр {% if sem.Name %}({{ sem.Name }}){% endif %}
+          </option>
+        {% endfor %}
+      </select>
+      {% if fieldErrors.Semester or fieldErrors.AcademicYear or fieldErrors.CourseYear %}
+        <span class="error-text">
+          {{ fieldErrors.Semester or fieldErrors.AcademicYear or fieldErrors.CourseYear }}
+        </span>
+      {% endif %}
+
+      <!-- Інформаційний рядок автоматично визначеного періоду -->
+      <div id="periodSummaryBox" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-top: 8px; font-size: 0.88rem; color: #334155;">
+        <div>Період: <strong id="summaryPeriodText"></strong> | Курс: <strong id="summaryCourseText"></strong></div>
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+          Термін семестру: <span id="summaryDatesText"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Навчальна дисципліна (Предмет) -->
+    <div class="form-group">
+      <label for="SubjectID">Навчальна дисципліна (Предмет) <span style="color: var(--danger);">*</span></label>
+      <select 
+        id="SubjectID" 
+        name="SubjectID" 
+        class="{% if fieldErrors.SubjectID %}input-error{% endif %}"
+        {% if not selectedGroupId and not itemData.GroupID %}disabled{% endif %}
+      >
+        <option value="">
+          {% if not selectedGroupId and not itemData.GroupID %}
+            -- Спочатку оберіть академічну групу --
+          {% else %}
+            -- Оберіть навчальну дисципліну --
+          {% endif %}
+        </option>
+      </select>
+      {% if fieldErrors.SubjectID %}
+        <span class="error-text">{{ fieldErrors.SubjectID }}</span>
+      {% endif %}
+    </div>
+
+    <!-- 5. Викладач -->
+    <div class="form-group">
+      <label for="TeacherID">Викладач <span style="color: var(--danger);">*</span></label>
+      <select 
+        id="TeacherID" 
+        name="TeacherID" 
+        class="{% if fieldErrors.TeacherID %}input-error{% endif %}"
+        {% if not itemData.SubjectID %}disabled{% endif %}
+      >
+        <option value="">
+          {% if not itemData.SubjectID %}
+            -- Спочатку оберіть навчальну дисципліну --
+          {% else %}
+            -- Оберіть викладача --
+          {% endif %}
+        </option>
+      </select>
+      {% if fieldErrors.TeacherID %}
+        <span class="error-text">{{ fieldErrors.TeacherID }}</span>
+      {% endif %}
+    </div>
+
+    <!-- 6. Вид контролю -->
+    <div class="form-group">
+      <label for="ControlTypeID">Вид контролю <span style="color: var(--danger);">*</span></label>
+      <select 
+        id="ControlTypeID" 
+        name="ControlTypeID" 
+        class="{% if fieldErrors.ControlTypeID %}input-error{% endif %}"
+      >
+        <option value="">-- Оберіть вид контролю зі списку --</option>
+        {% for ct in controlTypes %}
+          <option value="{{ ct.ControlTypeID }}" {% if itemData.ControlTypeID == ct.ControlTypeID %}selected{% endif %}>
+            {{ ct.ControlTypeName }}
+          </option>
+        {% endfor %}
+      </select>
+      {% if fieldErrors.ControlTypeID %}
+        <span class="error-text">{{ fieldErrors.ControlTypeID }}</span>
+      {% endif %}
+    </div>
+
+    <!-- 7. Дата оцінювання та Оцінка -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="form-group">
+        <label for="AssessmentDate">Дата оцінювання <span style="color: var(--danger);">*</span></label>
+        <input 
+          type="date" 
+          id="AssessmentDate" 
+          name="AssessmentDate" 
+          value="{{ itemData.AssessmentDate }}" 
+          class="{% if fieldErrors.AssessmentDate %}input-error{% endif %}"
+        >
+        <div id="dateHintText" style="font-size: 0.76rem; color: #64748b; margin-top: 3px;">
+          Дата повинна бути в межах обраного навчального семестру
+        </div>
+        {% if fieldErrors.AssessmentDate %}
+          <span class="error-text">{{ fieldErrors.AssessmentDate }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="Mark">Оцінка (0-100) <span style="color: var(--danger);">*</span></label>
+        <input 
+          type="number" 
+          id="Mark" 
+          name="Mark" 
+          min="0" 
+          max="100" 
+          value="{{ itemData.Mark }}" 
+          placeholder="0 - 100"
+          class="{% if fieldErrors.Mark %}input-error{% endif %}"
+        >
+        {% if fieldErrors.Mark %}
+          <span class="error-text">{{ fieldErrors.Mark }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 24px;">
+      <button type="submit" id="submitBtn" class="btn btn-primary">
+        {% if isEdit %}Зберегти зміни{% else %}Створити запис{% endif %}
+      </button>
+      <a href="/admin/tables/{{ tableName }}" class="btn btn-outline">Скасувати</a>
+    </div>
+  </form>
+</div>
+
+{% include "components/duplicate-grade-modal.njk" %}
+
+<script>
+(function() {
+  const allStudents = {{ allStudents | dump | safe }};
+  const allAssignments = {{ allAssignments | dump | safe }};
+  const allSubjects = {{ allSubjects | dump | safe }};
+  const allTeachers = {{ allTeachers | dump | safe }};
+
+  const form = document.getElementById('successRateForm');
+  const groupSelect = document.getElementById('groupSelect');
+  const studentSelect = document.getElementById('StudentID');
+  const semesterSelect = document.getElementById('semesterSelect');
+  const academicYearInput = document.getElementById('AcademicYear');
+  const courseYearInput = document.getElementById('CourseYear');
+  const semesterInput = document.getElementById('Semester');
+  const periodSummaryBox = document.getElementById('periodSummaryBox');
+  const summaryPeriodText = document.getElementById('summaryPeriodText');
+  const summaryCourseText = document.getElementById('summaryCourseText');
+  const summaryDatesText = document.getElementById('summaryDatesText');
+
+  const subjectSelect = document.getElementById('SubjectID');
+  const teacherSelect = document.getElementById('TeacherID');
+  const controlTypeSelect = document.getElementById('ControlTypeID');
+  const assessmentDateInput = document.getElementById('AssessmentDate');
+  const markInput = document.getElementById('Mark');
+  const confirmOverwriteInput = document.getElementById('confirmOverwrite');
+  const existingSuccRateIdInput = document.getElementById('existingSuccRateId');
+
+  const duplicateModal = document.getElementById('duplicateModal');
+  const modalCloseBtn = document.getElementById('modalCloseBtn');
+  const modalCancelBtn = document.getElementById('modalCancelBtn');
+  const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+
+  // Очищення помилок при вводі
+  [groupSelect, studentSelect, semesterSelect, subjectSelect, teacherSelect, controlTypeSelect, assessmentDateInput, markInput].forEach(el => {
+    if (!el) return;
+    el.addEventListener('change', () => clearFieldError(el));
+    el.addEventListener('input', () => clearFieldError(el));
+  });
+
+  function clearFieldError(el) {
+    el.classList.remove('input-error');
+    const parent = el.closest('.form-group');
+    if (parent) {
+      const err = parent.querySelector('.error-text');
+      if (err) err.style.display = 'none';
+    }
+  }
+
+  function showFieldError(el, message) {
+    el.classList.add('input-error');
+    const parent = el.closest('.form-group');
+    if (parent) {
+      let err = parent.querySelector('.error-text');
+      if (!err) {
+        err = document.createElement('span');
+        err.className = 'error-text';
+        parent.appendChild(err);
+      }
+      err.textContent = message;
+      err.style.display = 'block';
+    }
+  }
+
+  // 1. Оновлення списку студентів обраної групи
+  function updateStudentsForGroup(selectedGroupId, preserveStudentId) {
+    const prevValue = preserveStudentId || studentSelect.value;
+    studentSelect.innerHTML = '';
+
+    if (!selectedGroupId) {
+      studentSelect.disabled = true;
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- Спочатку оберіть академічну групу --';
+      studentSelect.appendChild(opt);
+      return;
+    }
+
+    studentSelect.disabled = false;
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = '-- Оберіть студента --';
+    studentSelect.appendChild(defaultOpt);
+
+    const filtered = allStudents.filter(s => Number(s.GroupID) === Number(selectedGroupId));
+    filtered.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.StudentID;
+      opt.textContent = `${s.FullName} (${s.Subgroup || 'Основна група'})`;
+      if (String(s.StudentID) === String(prevValue)) {
+        opt.selected = true;
+      }
+      studentSelect.appendChild(opt);
+    });
+  }
+
+  // 2. Оновлення інформації про семестр, розрахунок курсу та лімітів дат
+  function updateSemesterInfo() {
+    const opt = semesterSelect.options[semesterSelect.selectedIndex];
+    if (!opt || !opt.value) {
+      academicYearInput.value = '';
+      semesterInput.value = '';
+      courseYearInput.value = '';
+      periodSummaryBox.style.display = 'none';
+      assessmentDateInput.removeAttribute('min');
+      assessmentDateInput.removeAttribute('max');
+      return;
+    }
+
+    const year = opt.dataset.year;
+    const sem = opt.dataset.semester;
+    const startDate = opt.dataset.start;
+    const endDate = opt.dataset.end;
+
+    academicYearInput.value = year;
+    semesterInput.value = sem;
+
+    // Розрахунок курсу
+    const selectedGroupOpt = groupSelect.options[groupSelect.selectedIndex];
+    const startYear = selectedGroupOpt ? Number(selectedGroupOpt.dataset.startyear) : null;
+    let courseYear = 1;
+
+    if (startYear && year) {
+      const match = year.match(/^(\d{4})/);
+      if (match) {
+        const cal = Number(match[1]) - startYear + 1;
+        if (cal >= 1 && cal <= 6) courseYear = cal;
+      }
+    }
+    courseYearInput.value = courseYear;
+
+    // Встановлення обмежень дати оцінювання
+    if (startDate && endDate) {
+      assessmentDateInput.min = startDate;
+      assessmentDateInput.max = endDate;
+
+      // Якщо поточна дата виходить за межі семестру, ставимо дату в межах
+      if (!assessmentDateInput.value || assessmentDateInput.value < startDate || assessmentDateInput.value > endDate) {
+        const today = new Date().toISOString().split('T')[0];
+        if (today >= startDate && today <= endDate) {
+          assessmentDateInput.value = today;
+        } else {
+          assessmentDateInput.value = startDate;
+        }
+      }
+    }
+
+    // Відображення зведення
+    summaryPeriodText.textContent = `${year}, ${sem} семестр`;
+    summaryCourseText.textContent = `${courseYear} курс`;
+    summaryDatesText.textContent = `з ${startDate || '—'} по ${endDate || '—'}`;
+    periodSummaryBox.style.display = 'block';
+
+    clearFieldError(semesterSelect);
+  }
+
+  // 3. Оновлення списку дисциплін ТІЛЬКИ ДЛЯ ОБРАНОЇ ГРУПИ
+  function updateSubjectsForGroup(selectedGroupId, preserveSubjectId) {
+    const prevValue = preserveSubjectId || subjectSelect.value;
+    subjectSelect.innerHTML = '';
+
+    if (!selectedGroupId) {
+      subjectSelect.disabled = true;
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- Спочатку оберіть академічну групу --';
+      subjectSelect.appendChild(opt);
+      updateTeachersForSubject(selectedGroupId, '', '');
+      return;
+    }
+
+    // Знаходимо ТІЛЬКИ ті дисципліни, які закріплені за цією групою в розкладі
+    const groupAssignments = allAssignments.filter(a => Number(a.GroupID) === Number(selectedGroupId));
+    const assignedSubjectIds = [...new Set(groupAssignments.map(a => Number(a.SubjectID)))];
+
+    const groupSubjects = allSubjects.filter(s => assignedSubjectIds.includes(Number(s.SubjectID)));
+
+    if (groupSubjects.length === 0) {
+      subjectSelect.disabled = true;
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- Для цієї групи немає закріплених дисциплін --';
+      subjectSelect.appendChild(opt);
+      updateTeachersForSubject(selectedGroupId, '', '');
+      return;
+    }
+
+    subjectSelect.disabled = false;
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = '-- Оберіть навчальну дисципліну --';
+    subjectSelect.appendChild(defaultOpt);
+
+    let hasSelected = false;
+    groupSubjects.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.SubjectID;
+      opt.textContent = s.SubjectName;
+      if (String(s.SubjectID) === String(prevValue)) {
+        opt.selected = true;
+        hasSelected = true;
+      }
+      subjectSelect.appendChild(opt);
+    });
+
+    updateTeachersForSubject(selectedGroupId, hasSelected ? prevValue : '', teacherSelect.value);
+  }
+
+  // 4. Оновлення списку викладачів ТІЛЬКИ ДЛЯ ОБРАНОЇ ДИСЦИПЛІНИ ТА ГРУПИ
+  function updateTeachersForSubject(selectedGroupId, selectedSubjectId, preserveTeacherId) {
+    const prevValue = preserveTeacherId || teacherSelect.value;
+    teacherSelect.innerHTML = '';
+
+    if (!selectedGroupId || !selectedSubjectId) {
+      teacherSelect.disabled = true;
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = selectedGroupId ? '-- Спочатку оберіть навчальну дисципліну --' : '-- Спочатку оберіть академічну групу --';
+      teacherSelect.appendChild(opt);
+      return;
+    }
+
+    // ТІЛЬКИ викладачі, які закріплені за цією дисципліною у цій групі
+    const matchingAssignments = allAssignments.filter(a => 
+      Number(a.GroupID) === Number(selectedGroupId) && Number(a.SubjectID) === Number(selectedSubjectId)
+    );
+    const assignedTeacherIds = [...new Set(matchingAssignments.map(a => Number(a.TeacherID)))];
+    const groupTeachers = allTeachers.filter(t => assignedTeacherIds.includes(Number(t.TeacherID)));
+
+    if (groupTeachers.length === 0) {
+      teacherSelect.disabled = true;
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- Немає викладачів, закріплених за цим предметом у групі --';
+      teacherSelect.appendChild(opt);
+      return;
+    }
+
+    teacherSelect.disabled = false;
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = '-- Оберіть викладача --';
+    teacherSelect.appendChild(defaultOpt);
+
+    groupTeachers.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.TeacherID;
+      opt.textContent = t.FullName;
+      if (String(t.TeacherID) === String(prevValue)) {
+        opt.selected = true;
+      }
+      teacherSelect.appendChild(opt);
+    });
+
+    // Якщо викладач лише один — обираємо його автоматично
+    if (groupTeachers.length === 1 && !prevValue) {
+      teacherSelect.value = groupTeachers[0].TeacherID;
+      clearFieldError(teacherSelect);
+    }
+  }
+
+  // Слухачі змін полів
+  groupSelect.addEventListener('change', function() {
+    const groupId = this.value;
+    updateStudentsForGroup(groupId, '');
+    updateSubjectsForGroup(groupId, '');
+    updateSemesterInfo();
+  });
+
+  semesterSelect.addEventListener('change', function() {
+    updateSemesterInfo();
+  });
+
+  subjectSelect.addEventListener('change', function() {
+    updateTeachersForSubject(groupSelect.value, this.value, '');
+  });
+
+  // Модальне вікно дубліката
+  function showDuplicateModal(record, newMark) {
+    document.getElementById('modalStudentName').textContent = record.studentName;
+    document.getElementById('modalSubjectName').textContent = record.subjectName;
+    document.getElementById('modalControlType').textContent = record.controlTypeName;
+    document.getElementById('modalPeriod').textContent = `${record.academicYear}, ${record.semester} сем.`;
+    document.getElementById('modalOldMark').textContent = record.mark;
+    document.getElementById('modalOldDate').textContent = record.assessmentDate;
+    document.getElementById('modalOldTeacher').textContent = record.teacherName;
+    document.getElementById('modalNewMark').textContent = newMark;
+
+    duplicateModal.style.display = 'flex';
+
+    modalConfirmBtn.onclick = function() {
+      confirmOverwriteInput.value = 'true';
+      existingSuccRateIdInput.value = record.succRateId;
+      duplicateModal.style.display = 'none';
+      form.submit();
+    };
+
+    modalCancelBtn.onclick = function() {
+      duplicateModal.style.display = 'none';
+    };
+
+    modalCloseBtn.onclick = function() {
+      duplicateModal.style.display = 'none';
+    };
+  }
+
+  window.confirmOverwriteDirectly = function() {
+    confirmOverwriteInput.value = 'true';
+    form.submit();
+  };
+
+  // Валідація та надсилання форми
+  form.addEventListener('submit', async function(e) {
+    if (confirmOverwriteInput.value === 'true') {
+      return true;
+    }
+
+    let hasErrors = false;
+    const groupId = groupSelect.value;
+    const studentId = studentSelect.value;
+    const semesterVal = semesterSelect.value;
+    const subjectId = subjectSelect.value;
+    const teacherId = teacherSelect.value;
+    const controlTypeId = controlTypeSelect.value;
+    const academicYear = academicYearInput.value;
+    const courseYear = courseYearInput.value ? Number(courseYearInput.value) : null;
+    const semester = semesterInput.value ? Number(semesterInput.value) : null;
+    const assessmentDate = assessmentDateInput.value;
+    const markStr = markInput.value;
+    const mark = markStr !== '' ? Number(markStr) : NaN;
+
+    if (!groupId) { showFieldError(groupSelect, 'Оберіть академічну групу'); hasErrors = true; }
+    if (!studentId) { showFieldError(studentSelect, 'Оберіть студента зі списку'); hasErrors = true; }
+    if (!semesterVal || !academicYear || !semester) { showFieldError(semesterSelect, 'Оберіть навчальний семестр'); hasErrors = true; }
+    if (!subjectId) { showFieldError(subjectSelect, 'Оберіть навчальну дисципліну'); hasErrors = true; }
+    if (!teacherId) { showFieldError(teacherSelect, 'Оберіть викладача'); hasErrors = true; }
+    if (!controlTypeId) { showFieldError(controlTypeSelect, 'Оберіть вид семестрового контролю'); hasErrors = true; }
+
+    // Перевірка дати в межах семестру
+    const semOpt = semesterSelect.options[semesterSelect.selectedIndex];
+    if (!assessmentDate) {
+      showFieldError(assessmentDateInput, 'Вкажіть дату оцінювання');
+      hasErrors = true;
+    } else if (semOpt && semOpt.dataset.start && semOpt.dataset.end) {
+      if (assessmentDate < semOpt.dataset.start || assessmentDate > semOpt.dataset.end) {
+        showFieldError(assessmentDateInput, `Дата оцінювання повинна бути в межах навчального семестру (з ${semOpt.dataset.start} по ${semOpt.dataset.end})`);
+        hasErrors = true;
+      }
+    }
+
+    if (isNaN(mark) || mark < 0 || mark > 100) {
+      showFieldError(markInput, 'Оцінка повинна бути числом від 0 до 100');
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      e.preventDefault();
+      return false;
+    }
+
+    e.preventDefault();
+
+    try {
+      const params = new URLSearchParams({
+        studentId,
+        subjectId,
+        controlTypeId,
+        academicYear,
+        semester
+      });
+
+      const currentRecordId = '{{ id if isEdit else "" }}';
+      if (currentRecordId) {
+        params.append('excludeId', currentRecordId);
+      }
+
+      const resp = await fetch(`/admin/tables/success_rate/check-duplicate?${params.toString()}`);
+      const data = await resp.json();
+
+      if (data.exists && data.record) {
+        showDuplicateModal(data.record, mark);
+      } else {
+        confirmOverwriteInput.value = 'false';
+        form.submit();
+      }
+    } catch (err) {
+      console.error('Помилка перевірки дубліката:', err);
+      form.submit();
+    }
+  });
+
+  // Початкова ініціалізація форми
+  const initialGroupId = '{{ selectedGroupId or itemData.GroupID or "" }}';
+  const initialStudentId = '{{ itemData.StudentID or "" }}';
+  const initialSubjectId = '{{ itemData.SubjectID or "" }}';
+  const initialTeacherId = '{{ itemData.TeacherID or "" }}';
+
+  if (initialGroupId) {
+    updateStudentsForGroup(initialGroupId, initialStudentId);
+    updateSubjectsForGroup(initialGroupId, initialSubjectId);
+    if (initialSubjectId) {
+      updateTeachersForSubject(initialGroupId, initialSubjectId, initialTeacherId);
+    }
+    updateSemesterInfo();
+  }
+})();
+</script>
+{% endblock %}

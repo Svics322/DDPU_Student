@@ -1,0 +1,21 @@
+{# Компонент заголовка сторінки з навігацією та кнопками дій #}
+{% macro pageHeader(title, subtitle, backUrl, backText) %}
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+    <div>
+      {% if backUrl %}
+        <div style="margin-bottom: 8px;">
+          <a href="{{ backUrl }}" class="btn btn-outline btn-sm">&larr; {{ backText or "Назад" }}</a>
+        </div>
+      {% endif %}
+      <h1 class="section-title" style="margin-bottom: 4px;">{{ title }}</h1>
+      {% if subtitle %}
+        <p style="color: var(--muted); font-size: 0.9rem;">{{ subtitle }}</p>
+      {% endif %}
+    </div>
+    {% if caller %}
+      <div>
+        {{ caller() }}
+      </div>
+    {% endif %}
+  </div>
+{% endmacro %}

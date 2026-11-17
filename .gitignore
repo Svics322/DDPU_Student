@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.npm/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Runtime output
+logs/
+*.log
+coverage/
+uploads/
+public/uploads/
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor and OS noise
+~$*
+Thumbs.db
+desktop.ini
+.DS_Store
+.idea/
+.vscode/

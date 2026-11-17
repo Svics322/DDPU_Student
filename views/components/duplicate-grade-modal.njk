@@ -1,0 +1,51 @@
+{# Модальне вікно підтвердження оновлення наявної оцінки у відомості #}
+<div id="duplicateModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+  <div class="card" style="max-width: 520px; width: 100%; margin: 0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+      <h3 style="margin: 0; font-size: 1.15rem; color: #b45309; font-weight: 700;">
+        Запис з такими даними вже існує
+      </h3>
+      <button type="button" id="modalCloseBtn" style="background: none; border: none; font-size: 1.4rem; line-height: 1; cursor: pointer; color: #94a3b8;">&times;</button>
+    </div>
+
+    <p style="font-size: 0.88rem; color: #334155; margin-bottom: 14px;">
+      У відомості успішності для цього студента вже зафіксовано семестровий результат за обраними параметрами:
+    </p>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; margin-bottom: 16px; font-size: 0.88rem; line-height: 1.6;">
+      <div>Студент: <strong id="modalStudentName" style="color: #0f172a;"></strong></div>
+      <div>Дисципліна: <strong id="modalSubjectName" style="color: #0f172a;"></strong></div>
+      <div>Вид контролю: <strong id="modalControlType"></strong> (<span id="modalPeriod"></span>)</div>
+      
+      <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 600;">Попередня оцінка</div>
+          <div style="font-size: 1.15rem; font-weight: 700; color: #dc2626;">
+            <span id="modalOldMark"></span> балів
+          </div>
+          <div style="font-size: 0.78rem; color: #64748b;">
+            Дата: <span id="modalOldDate"></span> | Викладач: <span id="modalOldTeacher"></span>
+          </div>
+        </div>
+
+        <div style="text-align: right;">
+          <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 600;">Нова оцінка</div>
+          <div style="font-size: 1.15rem; font-weight: 700; color: #166534;">
+            <span id="modalNewMark"></span> балів
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size: 0.88rem; color: #475569; margin-bottom: 20px;">
+      Ви дійсно бажаєте оновити наявний запис оцінки на нове значення?
+    </p>
+
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button type="button" id="modalCancelBtn" class="btn btn-outline">Скасувати</button>
+      <button type="button" id="modalConfirmBtn" class="btn btn-primary" style="background-color: #059669; border-color: #059669;">
+        Так, оновити оцінку
+      </button>
+    </div>
+  </div>
+</div>

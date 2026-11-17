@@ -1,0 +1,15 @@
+{% macro gradeBadge(mark) %}
+  {% if mark is defined and mark !== null %}
+    {% if mark >= 90 %}
+      <span class="badge badge-success">{{ mark }} (відмінно)</span>
+    {% elif mark >= 75 %}
+      <span class="badge badge-info">{{ mark }} (добре)</span>
+    {% elif mark >= 60 %}
+      <span class="badge badge-warning">{{ mark }} (задовільно)</span>
+    {% else %}
+      <span class="badge badge-danger">{{ mark }} (незадовільно)</span>
+    {% endif %}
+  {% else %}
+    <span class="badge badge-secondary">—</span>
+  {% endif %}
+{% endmacro %}

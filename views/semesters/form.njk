@@ -1,0 +1,193 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 30px auto;">
+  <div style="margin-bottom: 20px;">
+    <div style="margin-bottom: 8px;">
+      {% if currentUser.role == 'admin' %}
+        <a href="/admin/semesters" class="btn btn-outline btn-sm">&larr; До списку семестрів</a>
+      {% else %}
+        <a href="/teacher/semesters" class="btn btn-outline btn-sm">&larr; До списку семестрів</a>
+      {% endif %}
+    </div>
+    <h1 class="section-title" style="margin-bottom: 4px;">{{ title }}</h1>
+    <p style="color: var(--muted); font-size: 0.88rem;">
+      Вкажіть навчальний рік, календарні дати початку та завершення семестру
+    </p>
+  </div>
+
+  <form 
+    action="{% if isEdit %}{% if currentUser.role == 'admin' %}/admin/semesters/{{ semester.SemesterID }}/edit{% else %}/teacher/semesters/{{ semester.SemesterID }}/edit{% endif %}{% else %}{% if currentUser.role == 'admin' %}/admin/semesters/create{% else %}/teacher/semesters/create{% endif %}{% endif %}" 
+    method="POST" 
+    novalidate
+  >
+    <div class="form-group">
+      <label for="academicYear">Навчальний рік</label>
+      <input 
+        type="text" 
+        id="academicYear" 
+        name="academicYear" 
+        value="{{ formData.academicYear or '2025/2026' }}" 
+        placeholder="Наприклад: 2025/2026"
+        class="{% if errors.academicYear %}input-error{% endif %}"
+      >
+      {% if errors.academicYear %}
+        <span class="error-text">{{ errors.academicYear }}</span>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label for="semesterNumber">Семестр</label>
+      <select 
+        id="semesterNumber" 
+        name="semesterNumber" 
+        class="{% if errors.semesterNumber %}input-error{% endif %}"
+      >
+        <option value="1" {% if formData.semesterNumber == 1 or formData.semesterNumber == '1' %}selected{% endif %}>
+          1 семестр (Осінній)
+        </option>
+        <option value="2" {% if formData.semesterNumber == 2 or formData.semesterNumber == '2' %}selected{% endif %}>
+          2 семестр (Весняний)
+        </option>
+      </select>
+      {% if errors.semesterNumber %}
+        <span class="error-text">{{ errors.semesterNumber }}</span>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label for="name">Повна назва навчального семестру</label>
+      <input 
+        type="text" 
+        id="name" 
+        name="name" 
+        value="{{ formData.name }}" 
+        placeholder="Наприклад: 2025/2026 - 1 семестр (Осінній)"
+        class="{% if errors.name %}input-error{% endif %}"
+      >
+      {% if errors.name %}
+        <span class="error-text">{{ errors.name }}</span>
+      {% endif %}
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="form-group">
+        <label for="startDate">Дата початку семестру</label>
+        <input 
+          type="date" 
+          id="startDate" 
+          name="startDate" 
+          value="{{ formData.startDate }}"
+          class="{% if errors.startDate %}input-error{% endif %}"
+        >
+        {% if errors.startDate %}
+          <span class="error-text">{{ errors.startDate }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="endDate">Дата закриття (завершення)</label>
+        <input 
+          type="date" 
+          id="endDate" 
+          name="endDate" 
+          value="{{ formData.endDate }}"
+          class="{% if errors.endDate %}input-error{% endif %}"
+        >
+        {% if errors.endDate %}
+          <span class="error-text">{{ errors.endDate }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="status">Статус навчального періоду</label>
+      <select id="status" name="status">
+        <option value="planned" {% if formData.status == 'planned' %}selected{% endif %}>
+          Заплановано (підготовка до початку)
+        </option>
+        <option value="active" {% if formData.status == 'active' %}selected{% endif %}>
+          Виконується / Триває (активний навчальний період)
+        </option>
+        {% if currentUser.role == 'admin' or formData.status == 'completed' %}
+          <option value="completed" {% if formData.status == 'completed' %}selected{% endif %}>
+            Завершено / Закрито (підсумковий контроль проведено)
+          </option>
+        {% endif %}
+      </select>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 24px;">
+      <button type="submit" class="btn btn-primary">
+        {% if isEdit %}Зберегти зміни{% else %}Запланувати семестр{% endif %}
+      </button>
+      {% if currentUser.role == 'admin' %}
+        <a href="/admin/semesters" class="btn btn-outline">Скасувати</a>
+      {% else %}
+        <a href="/teacher/semesters" class="btn btn-outline">Скасувати</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<script>
+  (function() {
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const yearInput = document.getElementById('academicYear');
+    const semNumSelect = document.getElementById('semesterNumber');
+    const nameInput = document.getElementById('name');
+    const formEl = document.querySelector('form');
+
+    function syncDateConstraints() {
+      if (startDateInput.value) {
+        endDateInput.min = startDateInput.value;
+        if (endDateInput.value && endDateInput.value <= startDateInput.value) {
+          endDateInput.setCustomValidity('Дата закриття має бути пізнішою за дату початку');
+        } else {
+          endDateInput.setCustomValidity('');
+        }
+      }
+    }
+
+    function autoSuggestName() {
+      if (!nameInput.value || nameInput.dataset.autoGenerated === 'true') {
+        const year = yearInput.value.trim();
+        const num = semNumSelect.value;
+        const semWord = num === '1' ? '1 семестр (Осінній)' : '2 семестр (Весняний)';
+        if (year) {
+          nameInput.value = year + ' - ' + semWord;
+          nameInput.dataset.autoGenerated = 'true';
+        }
+      }
+    }
+
+    nameInput.addEventListener('input', function() {
+      delete nameInput.dataset.autoGenerated;
+    });
+
+    if (startDateInput && endDateInput) {
+      startDateInput.addEventListener('change', syncDateConstraints);
+      endDateInput.addEventListener('change', syncDateConstraints);
+    }
+
+    if (yearInput && semNumSelect) {
+      yearInput.addEventListener('input', autoSuggestName);
+      semNumSelect.addEventListener('change', autoSuggestName);
+    }
+
+    if (formEl) {
+      formEl.addEventListener('submit', function(e) {
+        if (startDateInput.value && endDateInput.value && endDateInput.value <= startDateInput.value) {
+          e.preventDefault();
+          alert('Помилка: Дата закриття семестру повинна бути пізнішою за дату початку!');
+          endDateInput.focus();
+          return false;
+        }
+      });
+    }
+
+    syncDateConstraints();
+  })();
+</script>
+{% endblock %}

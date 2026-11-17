@@ -1,0 +1,21 @@
+{# Компонент статистичних метрик та інфо-карток #}
+{% macro statBox(label, value, color) %}
+  <div class="info-box">
+    <div class="info-label">{{ label }}</div>
+    <div class="info-value" {% if color %}style="color: {{ color }};"{% endif %}>
+      {{ value if value !== null and value !== undefined else "—" }}
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro infoBlock(label, value, subValue) %}
+  <div class="info-box">
+    <div class="info-label">{{ label }}</div>
+    <div style="font-weight: 600; color: #0f172a; font-size: 0.95rem;">
+      {{ value }}
+      {% if subValue %}
+        <span style="font-size: 0.85rem; color: var(--muted); font-weight: 400;">{{ subValue }}</span>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}

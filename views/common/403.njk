@@ -1,0 +1,23 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div style="max-width: 560px; margin: 60px auto; text-align: center;">
+  <div class="card" style="padding: 36px 24px;">
+    <h1 style="color: var(--danger); font-size: 1.8rem; margin-bottom: 12px;">403 - Доступ обмежено</h1>
+    <p style="color: var(--muted); font-size: 0.95rem; margin-bottom: 24px; line-height: 1.6;">
+      {{ message or "У вас недостатньо повноважень для перегляду цієї сторінки." }}
+    </p>
+
+    <div style="display: flex; gap: 10px; justify-content: center;">
+      {% if currentUser.role == 'admin' %}
+        <a href="/admin/tables" class="btn btn-primary">До панелі адміністратора</a>
+      {% elif currentUser.role == 'teacher' %}
+        <a href="/teacher/courses" class="btn btn-primary">До моїх дисциплін</a>
+      {% else %}
+        <a href="/student/profile" class="btn btn-primary">До мого профілю</a>
+      {% endif %}
+      <a href="/success-rates" class="btn btn-outline">Загальна відомість</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

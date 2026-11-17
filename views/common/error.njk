@@ -1,0 +1,16 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div style="max-width: 560px; margin: 60px auto;">
+  <div class="card" style="border-left: 4px solid var(--danger);">
+    <h2 style="color: var(--danger); font-size: 1.4rem; margin-bottom: 10px;">Повідомлення системи</h2>
+    <p style="color: var(--text); font-size: 0.95rem; margin-bottom: 20px;">
+      {{ error or "Сталася помилка обробки запиту." }}
+    </p>
+    <div style="display: flex; gap: 10px;">
+      <a href="/" class="btn btn-primary">На головну</a>
+      <a href="javascript:history.back()" class="btn btn-outline">Повернутися назад</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,287 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+<div class="card" style="max-width: 640px; margin: 30px auto;">
+  <div style="margin-bottom: 20px;">
+    <div style="margin-bottom: 8px;">
+      <a href="/teacher/courses/{{ assignment.AssignmentID }}/students" class="btn btn-outline btn-sm">
+        &larr; Назад до журналу курсу
+      </a>
+    </div>
+    <h1 class="section-title" style="margin-bottom: 4px;">Запросити співвикладача до курсу</h1>
+    <p style="color: var(--muted); font-size: 0.88rem;">
+      Дисципліна: <strong>{{ assignment.subject.SubjectName }}</strong> | Група: <strong>{{ assignment.group.GroupName }}</strong>
+    </p>
+  </div>
+
+  <!-- Інформація про курс -->
+  <div class="info-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 20px;">
+    <div class="info-box" style="padding: 10px 14px;">
+      <div class="info-label">Навчальний період</div>
+      <div style="font-weight: 600; font-size: 0.92rem; color: #1e293b;">
+        {{ assignment.AcademicYear }} ({{ assignment.Semester }} сем.)
+      </div>
+    </div>
+    <div class="info-box" style="padding: 10px 14px;">
+      <div class="info-label">Ваша підгрупа / роль</div>
+      <div style="font-weight: 600; font-size: 0.92rem; color: #1e293b;">
+        {{ assignment.Subgroup }} ({{ assignment.RoleType }})
+      </div>
+    </div>
+  </div>
+
+  {% if (teachers | length) == 0 %}
+    <div class="alert alert-info" style="margin-bottom: 20px;">
+      Наразі немає інших колег-викладачів зі схваленим доступом до дисципліни <strong>«{{ assignment.subject.SubjectName }}»</strong>. Щоб надіслати запрошення, викладач повинен мати схвалену адміністратором заявку на доступ до цього предмету.
+    </div>
+  {% endif %}
+
+  <form id="inviteForm" action="/teacher/courses/{{ assignment.AssignmentID }}/invite" method="POST" novalidate>
+    <div class="form-group">
+      <label for="receiverTeacherId">Оберіть колегу-викладача</label>
+      <select 
+        id="receiverTeacherId" 
+        name="receiverTeacherId" 
+        class="{% if errors.receiverTeacherId %}input-error{% endif %}"
+        {% if (teachers | length) == 0 %}disabled{% endif %}
+      >
+        {% if (teachers | length) == 0 %}
+          <option value="">-- Немає доступних колег зі схваленим доступом до предмету --</option>
+        {% else %}
+          <option value="">-- Оберіть викладача --</option>
+          {% for t in teachers %}
+            {% set hasPending = false %}
+            {% for inv in existingInvitations %}
+              {% if inv.ReceiverTeacherID == t.TeacherID and inv.Status == 'pending' %}
+                {% set hasPending = true %}
+              {% endif %}
+            {% endfor %}
+            <option 
+              value="{{ t.TeacherID }}" 
+              {% if hasPending %}disabled style="color: #94a3b8;"{% endif %}
+              {% if formData.receiverTeacherId == t.TeacherID and not hasPending %}selected{% endif %}
+            >
+              {{ t.FullName }} ({{ t.department.AbbreviatedName if t.department else "Кафедра" }})
+            </option>
+          {% endfor %}
+        {% endif %}
+      </select>
+      {% if errors.receiverTeacherId %}
+        <span class="error-text">{{ errors.receiverTeacherId }}</span>
+      {% endif %}
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="form-group">
+        <label for="roleType">Вид навантаження для співвикладача</label>
+        <select 
+          id="roleType" 
+          name="roleType" 
+          class="{% if errors.roleType %}input-error{% endif %}"
+        >
+          <option value="">-- Оберіть вид навантаження --</option>
+          <option value="Лабораторні заняття" {% if formData.roleType == 'Лабораторні заняття' %}selected{% endif %}>Лабораторні заняття</option>
+          <option value="Практичні заняття" {% if formData.roleType == 'Практичні заняття' %}selected{% endif %}>Практичні заняття</option>
+          <option value="Лекційні заняття" {% if formData.roleType == 'Лекційні заняття' %}selected{% endif %}>Лекційні заняття</option>
+          <option value="Лекції та семінари" {% if formData.roleType == 'Лекції та семінари' %}selected{% endif %}>Лекції та семінари</option>
+          <option value="Лекції та практика" {% if formData.roleType == 'Лекції та практика' %}selected{% endif %}>Лекції та практика</option>
+          <option value="Семінарські заняття" {% if formData.roleType == 'Семінарські заняття' %}selected{% endif %}>Семінарські заняття</option>
+        </select>
+        {% if errors.roleType %}
+          <span class="error-text">{{ errors.roleType }}</span>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="subgroup">Підгрупа для співвикладача</label>
+        <select 
+          id="subgroup" 
+          name="subgroup" 
+          class="{% if errors.subgroup %}input-error{% endif %}"
+        >
+          <option value="">-- Оберіть підгрупу --</option>
+          <option value="Підгрупа 1" {% if formData.subgroup == 'Підгрупа 1' %}selected{% endif %}>Підгрупа 1</option>
+          <option value="Підгрупа 2" {% if formData.subgroup == 'Підгрупа 2' %}selected{% endif %}>Підгрупа 2</option>
+          <option value="Вся група" {% if formData.subgroup == 'Вся група' %}selected{% endif %}>Вся група</option>
+        </select>
+        {% if errors.subgroup %}
+          <span class="error-text">{{ errors.subgroup }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="message">Супровідне повідомлення (за бажанням)</label>
+      <textarea 
+        id="message" 
+        name="message" 
+        rows="3" 
+        placeholder="Наприклад: Запрошую проводити лабораторний практикум для 2-ї підгрупи..."
+      >{{ formData.message }}</textarea>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 24px;">
+      <button type="submit" id="submitInviteBtn" class="btn btn-primary" {% if (teachers | length) == 0 %}disabled{% endif %}>
+        Надіслати запрошення колезі
+      </button>
+      <a href="/teacher/courses/{{ assignment.AssignmentID }}/students" class="btn btn-outline">
+        Скасувати
+      </a>
+    </div>
+  </form>
+
+  {% if (existingInvitations | length) > 0 %}
+    <div style="margin-top: 36px; border-top: 1px solid var(--border-light); padding-top: 20px;">
+      <h3 style="font-size: 0.95rem; font-weight: 600; color: #1e3a8a; margin-bottom: 12px;">
+        Раніше надіслані запрошення до цього курсу
+      </h3>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Запрошений викладач</th>
+              <th>Роль / Підгрупа</th>
+              <th>Статус</th>
+              <th>Дата</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inv in existingInvitations %}
+              <tr>
+                <td><strong>{{ inv.receiverTeacher.FullName }}</strong></td>
+                <td>{{ inv.RoleType }} ({{ inv.Subgroup }})</td>
+                <td>
+                  {% if inv.Status == 'accepted' %}
+                    <span class="badge badge-success">Прийнято</span>
+                  {% elif inv.Status == 'declined' %}
+                    <span class="badge badge-danger">Відхилено</span>
+                  {% else %}
+                    <span class="badge badge-warning">Очікує відповіді</span>
+                  {% endif %}
+                </td>
+                <td style="font-size: 0.82rem; color: var(--muted);">
+                  {{ inv.CreatedAt | default("—") }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  (function() {
+    const relatedAssignments = {{ relatedAssignmentsJSON | safe if relatedAssignmentsJSON else '[]' }};
+    const pendingInvitations = {{ pendingInvitationsJSON | safe if pendingInvitationsJSON else '[]' }};
+
+    const formEl = document.getElementById('inviteForm');
+    const teacherSelect = document.getElementById('receiverTeacherId');
+    const roleSelect = document.getElementById('roleType');
+    const subgroupSelect = document.getElementById('subgroup');
+
+    function updateInviteOptions() {
+      const selectedSubgroup = subgroupSelect.value;
+
+      // 1. Оновлюємо доступність для roleType
+      Array.from(roleSelect.options).forEach(opt => {
+        if (!opt.value) return;
+        const role = opt.value;
+        const matches = relatedAssignments.filter(a => a.roleType === role);
+        const hasWhole = matches.some(a => a.subgroup === 'Вся група');
+        const hasSub1 = matches.some(a => a.subgroup === 'Підгрупа 1');
+        const hasSub2 = matches.some(a => a.subgroup === 'Підгрупа 2');
+
+        const pendingMatches = pendingInvitations.filter(p => p.roleType === role);
+        const pendingSub1 = pendingMatches.some(p => p.subgroup === 'Підгрупа 1');
+        const pendingSub2 = pendingMatches.some(p => p.subgroup === 'Підгрупа 2');
+        const pendingWhole = pendingMatches.some(p => p.subgroup === 'Вся група');
+
+        let isBlocked = false;
+        if (hasWhole || ((hasSub1 || pendingSub1) && (hasSub2 || pendingSub2))) {
+          isBlocked = true;
+        } else if (selectedSubgroup === 'Вся група' && (hasSub1 || hasSub2 || pendingSub1 || pendingSub2)) {
+          isBlocked = true;
+        } else if (selectedSubgroup === 'Підгрупа 1' && (hasSub1 || pendingSub1 || hasWhole || pendingWhole)) {
+          isBlocked = true;
+        } else if (selectedSubgroup === 'Підгрупа 2' && (hasSub2 || pendingSub2 || hasWhole || pendingWhole)) {
+          isBlocked = true;
+        }
+
+        opt.disabled = isBlocked;
+        if (isBlocked && roleSelect.value === opt.value) {
+          roleSelect.value = '';
+        }
+      });
+
+      const activeRole = roleSelect.value;
+
+      // 2. Оновлюємо доступність для subgroup
+      if (!activeRole) {
+        Array.from(subgroupSelect.options).forEach(opt => {
+          if (!opt.value) return;
+          opt.disabled = false;
+        });
+      } else {
+        const matches = relatedAssignments.filter(a => a.roleType === activeRole);
+        const hasWhole = matches.some(a => a.subgroup === 'Вся група');
+        const hasSub1 = matches.some(a => a.subgroup === 'Підгрупа 1');
+        const hasSub2 = matches.some(a => a.subgroup === 'Підгрупа 2');
+
+        const pendingMatches = pendingInvitations.filter(p => p.roleType === activeRole);
+        const pendingSub1 = pendingMatches.some(p => p.subgroup === 'Підгрупа 1');
+        const pendingSub2 = pendingMatches.some(p => p.subgroup === 'Підгрупа 2');
+        const pendingWhole = pendingMatches.some(p => p.subgroup === 'Вся група');
+
+        Array.from(subgroupSelect.options).forEach(opt => {
+          if (!opt.value) return;
+
+          let isBlocked = false;
+          if (opt.value === 'Вся група') {
+            if (hasWhole || hasSub1 || hasSub2 || pendingSub1 || pendingSub2) isBlocked = true;
+          } else if (opt.value === 'Підгрупа 1') {
+            if (hasWhole || pendingWhole || hasSub1 || pendingSub1) isBlocked = true;
+          } else if (opt.value === 'Підгрупа 2') {
+            if (hasWhole || pendingWhole || hasSub2 || pendingSub2) isBlocked = true;
+          }
+
+          opt.disabled = isBlocked;
+          if (isBlocked && subgroupSelect.value === opt.value) {
+            subgroupSelect.value = '';
+          }
+        });
+      }
+    }
+
+    [teacherSelect, roleSelect, subgroupSelect].forEach(el => {
+      if (el) el.addEventListener('change', updateInviteOptions);
+    });
+
+    if (formEl) {
+      formEl.addEventListener('submit', function(e) {
+        const curRole = roleSelect.value;
+        const curSub = subgroupSelect.value;
+        const curTeacher = Number(teacherSelect.value);
+
+        if (!curRole || !curSub || !curTeacher) return;
+
+        const exactTaken = relatedAssignments.find(a => a.roleType === curRole && a.subgroup === curSub);
+        if (exactTaken) {
+          e.preventDefault();
+          return false;
+        }
+
+        const pendingTaken = pendingInvitations.find(p => p.roleType === curRole && p.subgroup === curSub);
+        if (pendingTaken) {
+          e.preventDefault();
+          return false;
+        }
+      });
+    }
+
+    updateInviteOptions();
+  })();
+</script>
+{% endblock %}
