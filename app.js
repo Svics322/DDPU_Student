@@ -88,21 +88,18 @@ const bootstrap = async () => {
     await sequelize.authenticate();
     console.log('З\'єднання з базою даних встановлено.');
 
-    // Схема — ПЕРЕД сідами: User має зовнішній ключ на teachers, і на порожній
-    // SQLite-базі sync користувачів падає з "no such table: main.teachers".
-    if (sequelize.getDialect() === 'sqlite') {
-      await sequelize.sync();
-    }
+    // Схема — ПЕРЕД сідами: User має зовнішній ключ на teachers, і на порожній базі
+    // sync користувачів падає з "no such table". sync() створює лише відсутні таблиці,
+    // тому на готовій схемі це безпечна no-op.
+    await sequelize.sync();
 
     // Синхронізація/посів користувачів
     await initAndSeedUsers();
 
-    // Postgres використовує готову схему з sql.sql — досинхронізовуємо лише нові моделі
-    if (sequelize.getDialect() !== 'sqlite') {
-      await Semester.sync();
-      await SubjectRequest.sync();
-      await CourseInvitation.sync();
-    }
+    // Досинхронізовуємо моделі, які могли з'явитися пізніше за основний sync
+    await Semester.sync();
+    await SubjectRequest.sync();
+    await CourseInvitation.sync();
 
     // Синхронізація авторитетного часу з зовнішнім Time API
     // (на serverless інтервали не мають сенсу — процес живе один запит)
