@@ -39,6 +39,12 @@ export const sequelize =
           host: process.env.DB_HOST || 'localhost',
           port: Number(process.env.DB_PORT) || 5432,
           dialect: 'postgres',
+          // Хмарні Postgres (Neon, Supabase, Render) вимагають SSL.
+          // Локальний Postgres зазвичай без нього — вимкнути через DB_SSL=false.
+          dialectOptions:
+            process.env.DB_SSL === 'false'
+              ? {}
+              : { ssl: { require: true, rejectUnauthorized: false } },
           ...common
         }
       );
