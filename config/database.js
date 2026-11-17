@@ -23,11 +23,19 @@ const common = {
   }
 };
 
-export const sequelize =
-  dialect === 'sqlite'
+export const sequelize = process.env.DATABASE_URL
+  ? // Neon (і більшість хостингів) віддають один рядок підключення.
+    new Sequelize(process.env.DATABASE_URL, {
+      dialect: 'postgres',
+      dialectOptions:
+        process.env.DB_SSL === 'false'
+          ? {}
+          : { ssl: { require: true, rejectUnauthorized: false } },
+      ...common
+    })
+  : dialect === 'sqlite'
     ? new Sequelize({
         dialect: 'sqlite',
-        // Єдина тека, доступна для запису у serverless-функції
         storage: process.env.DB_STORAGE || (isServerless ? '/tmp/app.db' : 'app.db'),
         ...common
       })
