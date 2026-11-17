@@ -88,10 +88,17 @@ const bootstrap = async () => {
     await sequelize.authenticate();
     console.log('З\'єднання з базою даних встановлено.');
 
-    // Схема — ПЕРЕД сідами: User має зовнішній ключ на teachers, і на порожній базі
-    // sync користувачів падає з "no such table". sync() створює лише відсутні таблиці,
-    // тому на готовій схемі це безпечна no-op.
-    await sequelize.sync();
+    // Схема — ПЕРЕД сідами: User має зовнішній ключ на teachers.
+    // Повний sync() робить інтроспекцію всіх таблиць і на холодному старті додає
+    // помітну затримку, тому на Postgres спершу дешево перевіряємо, чи схема вже є.
+    if (sequelize.getDialect() === 'sqlite') {
+      await sequelize.sync();
+    } else {
+      const [existing] = await sequelize.query("select to_regclass('public.users') as present");
+      if (!existing?.[0]?.present) {
+        await sequelize.sync();
+      }
+    }
 
     // Синхронізація/посів користувачів
     await initAndSeedUsers();

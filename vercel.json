@@ -1,9 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npm install --ignore-scripts=false",
+  "regions": ["fra1"],
   "functions": {
     "api/index.js": {
-      "includeFiles": ["node_modules/pg/**", "node_modules/pg-hstore/**"]
+      "includeFiles": "node_modules/pg*/**"
     }
   },
   "rewrites": [{ "source": "/(.*)", "destination": "/api/index.js" }]
