@@ -77,6 +77,23 @@ app.use((req, res, next) => {
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // Маршрутизація
+// Самодіагностика: показує, який саме коміт віддає цей інстанс і чи бачить він сесію.
+// Корисно, коли браузер показує стару сторінку, а сервер уже оновлений.
+app.get('/__health', (req, res) => {
+  res.setHeader('cache-control', 'no-store');
+  res.json({
+    ok: true,
+    commit: (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7),
+    node: process.version,
+    dialect: sequelize.getDialect(),
+    authenticated: Boolean(req.isAuthenticated && req.isAuthenticated()),
+    role: req.user?.role ?? null
+  });
+});
+
+// Голий /admin без підшляху не має віддавати 404
+app.get('/admin', (req, res) => res.redirect('/admin/tables'));
+
 app.use('/api', apiRoutes);
 app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
