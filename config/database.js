@@ -1,4 +1,6 @@
 import { Sequelize } from 'sequelize';
+import pg from 'pg';
+import pgHstore from 'pg-hstore';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -17,11 +19,17 @@ const dialect = process.env.DB_DIALECT || (isServerless ? 'postgres' : 'sqlite')
 
 const common = {
   logging: false,
+  // Sequelize підключає драйвер динамічно (require('pg')), і бандлер хостингу його
+  // не бачить. Явний імпорт + dialectModule гарантує, що пакет потрапить у функцію.
+  dialectModule: pg,
   define: {
     timestamps: false,
     freezeTableName: true
   }
 };
+
+// pg-hstore так само підтягується динамічно — тримаємо посилання, щоб його не вирізало
+void pgHstore;
 
 export const sequelize = process.env.DATABASE_URL
   ? // Neon (і більшість хостингів) віддають один рядок підключення.
