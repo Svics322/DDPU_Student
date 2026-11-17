@@ -50,13 +50,16 @@ export const postLogin = (req, res, next) => {
     req.logIn(user, (err) => {
       if (err) return next(err);
 
-      // Перенаправлення за роллю:
+      // Перенаправлення за роллю.
+      // 303 (See Other) — єдиний код, який гарантовано змушує браузер зробити GET
+      // після POST. Зі 302 хостинг перетворює відповідь на 307, і браузер повторює
+      // POST на /admin/tables, де є лише GET-маршрут → 404.
       if (user.role === 'admin') {
-        return res.redirect('/admin/tables');
+        return res.redirect(303, '/admin/tables');
       } else if (user.role === 'teacher') {
-        return res.redirect('/teacher/courses');
+        return res.redirect(303, '/teacher/courses');
       } else {
-        return res.redirect('/student/profile');
+        return res.redirect(303, '/student/profile');
       }
     });
   })(req, res, next);
@@ -175,7 +178,7 @@ export const postRegister = async (req, res) => {
       studentId: student.StudentID
     });
 
-    return res.redirect('/login?registered=1');
+    return res.redirect(303, '/login?registered=1');
   } catch (err) {
     return res.status(500).render('common/error.njk', { error: err.message });
   }
@@ -185,7 +188,8 @@ export const logout = (req, res, next) => {
   req.logout((err) => {
     if (err) return next(err);
     req.session.destroy(() => {
-      res.redirect('/login');
+      res.redirect(303, '/login');
     });
   });
 };
+
