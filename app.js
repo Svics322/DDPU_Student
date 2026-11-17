@@ -110,7 +110,10 @@ app.use('/', mainRoutes);
 
 // Обробник 404
 app.use((req, res) => {
-  res.status(404).render('common/error.njk', { error: 'Сторінку не знайдено (404).' });
+  console.warn(`[404] ${req.method} ${req.originalUrl}`);
+  res.status(404).render('common/error.njk', {
+    error: `Сторінку не знайдено (404). Запит: ${req.method} ${req.originalUrl}`
+  });
 });
 
 // Обробник помилок
