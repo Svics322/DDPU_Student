@@ -1,5 +1,11 @@
 import bcrypt from 'bcryptjs';
-import { User } from '../models/index.js';
+import { User, Teacher, Student } from '../models/index.js';
+
+// На готовій схемі (Postgres + sql.sql) записи 1 і 6 існують, і акаунти до них
+// прив'язуються. На порожній базі SQLite їх немає — тоді створюємо акаунти без
+// зовнішніх ключів, інакше вставка падає з FOREIGN KEY constraint failed.
+const hasTeacher = async (id) => Boolean(await Teacher.findByPk(id));
+const hasStudent = async (id) => Boolean(await Student.findByPk(id));
 
 export const initAndSeedUsers = async () => {
   try {
@@ -9,6 +15,9 @@ export const initAndSeedUsers = async () => {
     const count = await User.count();
     if (count === 0) {
       console.log('Ініціалізація початкових користувачів...');
+
+      const teacherId = (await hasTeacher(1)) ? 1 : null;
+      const studentId = (await hasStudent(6)) ? 6 : null;
 
       const defaultUsers = [
         {
@@ -22,14 +31,14 @@ export const initAndSeedUsers = async () => {
           password: await bcrypt.hash('teacher123', 10),
           role: 'teacher',
           fullName: 'Гольський Віталій Богданович',
-          teacherId: 1
+          teacherId
         },
         {
           username: 'visitor',
           password: await bcrypt.hash('visitor123', 10),
           role: 'visitor',
           fullName: 'Юрків Віталій Романович',
-          studentId: 6
+          studentId
         }
       ];
 

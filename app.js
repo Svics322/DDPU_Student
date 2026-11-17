@@ -88,15 +88,17 @@ const bootstrap = async () => {
     await sequelize.authenticate();
     console.log('З\'єднання з базою даних встановлено.');
 
+    // Схема — ПЕРЕД сідами: User має зовнішній ключ на teachers, і на порожній
+    // SQLite-базі sync користувачів падає з "no such table: main.teachers".
+    if (sequelize.getDialect() === 'sqlite') {
+      await sequelize.sync();
+    }
+
     // Синхронізація/посів користувачів
     await initAndSeedUsers();
 
-    // Синхронізація схеми.
-    // SQLite (демо на Vercel) створює всі таблиці з моделей; Postgres використовує
-    // готову схему, тому досинхронізовуємо лише нові моделі.
-    if (sequelize.getDialect() === 'sqlite') {
-      await sequelize.sync();
-    } else {
+    // Postgres використовує готову схему з sql.sql — досинхронізовуємо лише нові моделі
+    if (sequelize.getDialect() !== 'sqlite') {
       await Semester.sync();
       await SubjectRequest.sync();
       await CourseInvitation.sync();
