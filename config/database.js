@@ -11,7 +11,9 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const isServerless = Boolean(process.env.VERCEL);
-const dialect = process.env.DB_DIALECT || (isServerless ? 'sqlite' : 'postgres');
+// На хостингу типово Postgres: файлова система там лише для читання, а /tmp зникає
+// разом з інстансом. SQLite лишається для локальної роботи або явного DB_DIALECT.
+const dialect = process.env.DB_DIALECT || (isServerless ? 'postgres' : 'sqlite');
 
 const common = {
   logging: false,
