@@ -1,5 +1,6 @@
 import express from 'express';
 import session from 'express-session';
+import connectSessionSequelize from 'connect-session-sequelize';
 import nunjucks from 'nunjucks';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -40,9 +41,20 @@ app.use(express.urlencoded({ extended: true }));
 // Статичні ресурси (CSS стилі та клієнтські скрипти REST API)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Налаштування сесій
+// Налаштування сесій.
+// Сховище в Postgres, а не в памʼяті: serverless-інстанси не поділяють памʼять,
+// тому MemoryStore розлогінював користувача при переході на інший інстанс.
+const SequelizeStore = connectSessionSequelize(session.Store);
+const sessionStore = new SequelizeStore({
+  db: sequelize,
+  tableName: 'sessions',
+  checkExpirationInterval: 15 * 60 * 1000,
+  expiration: 24 * 60 * 60 * 1000
+});
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'super_secret_lab4_key_2026',
+  store: sessionStore,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -103,10 +115,11 @@ const bootstrap = async () => {
     // Синхронізація/посів користувачів
     await initAndSeedUsers();
 
-    // Досинхронізовуємо моделі, які могли з'явитися пізніше за основний sync
+    // Досинхронізовуємо моделі, які могли зʼявитися пізніше за основний sync
     await Semester.sync();
     await SubjectRequest.sync();
     await CourseInvitation.sync();
+    await sessionStore.sync();
 
     // Синхронізація авторитетного часу з зовнішнім Time API
     // (на serverless інтервали не мають сенсу — процес живе один запит)
